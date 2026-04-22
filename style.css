@@ -747,6 +747,59 @@ body {
 /* ── UTILITY ─────────────────────────────────────────── */
 .hidden { display: none !important; }
 
+/* ── FOOTER ──────────────────────────────────────────── */
+.site-footer {
+  position: relative;
+  z-index: 10;
+  margin-top: 2rem;
+  border-top: 1px solid var(--color-border);
+  background: rgba(13,15,26,0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.footer-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  background: var(--gradient-main);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.25rem;
+}
+
+.footer-copy {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.footer-author {
+  background: var(--gradient-main);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 600;
+}
+
+.footer-disclaimer {
+  font-size: 0.73rem;
+  color: var(--color-text-dim);
+}
+
 /* ── RESPONSIVE ──────────────────────────────────────── */
 @media (max-width: 900px) {
   .main-layout {
