@@ -243,10 +243,10 @@ function calcularHorasExtra(salarioMensual, jornadaSemanal, horas) {
    ══════════════════════════════════════════════════════ */
 
 /**
- * Extrae texto completo del PDF página por página.
+ * Extrae texto digital del PDF y el objeto pdf (para reutilizarlo en renderizado).
  * @param {File} file
  * @param {function} onProgress
- * @returns {Promise<string>}
+ * @returns {Promise<{text: string, pdf: object}>}
  */
 async function extractTextFromPDF(file, onProgress) {
   const arrayBuffer = await file.arrayBuffer();
@@ -254,12 +254,40 @@ async function extractTextFromPDF(file, onProgress) {
   let fullText = '';
   const total  = pdf.numPages;
   for (let i = 1; i <= total; i++) {
-    onProgress(Math.round((i / total) * 50), `Leyendo página ${i} de ${total}…`);
+    onProgress(Math.round((i / total) * 25), `Leyendo página ${i} de ${total}…`);
     const page    = await pdf.getPage(i);
     const content = await page.getTextContent();
     fullText += content.items.map((s) => s.str).join(' ') + '\n';
   }
-  return fullText;
+  return { text: fullText, pdf };
+}
+
+/**
+ * Renderiza las páginas del PDF como imágenes JPEG base64.
+ * Permite que el modelo de visión lea texto manuscrito e impreso.
+ * @param {object} pdf  objeto pdfjsLib ya cargado
+ * @param {function} onProgress
+ * @param {number} maxPages  máximo de páginas a renderizar (evitar tokens excesivos)
+ * @returns {Promise<string[]>}  array de base64 JPEG
+ */
+async function renderPDFToImages(pdf, onProgress, maxPages = 4) {
+  const total  = Math.min(pdf.numPages, maxPages);
+  const images = [];
+  for (let i = 1; i <= total; i++) {
+    onProgress(
+      25 + Math.round((i / total) * 25),
+      `Renderizando página ${i} de ${total} para OCR…`
+    );
+    const page     = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 1.8 }); // resolución suficiente para manuscrito
+    const canvas   = document.createElement('canvas');
+    canvas.width   = viewport.width;
+    canvas.height  = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    // JPEG al 85% — buen balance calidad/tamaño (~150-400 KB por página)
+    images.push(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]);
+  }
+  return images;
 }
 
 /* ── Festivos Colombia 2026 ──────────────────────────── */
@@ -343,40 +371,65 @@ function calcularDesdeRegistros(registros) {
 }
 
 /**
- * Llama al proxy /api/groq (serverless) para extraer los registros del PDF.
- * Groq devuelve un array JSON crudo; calcularDesdeRegistros() hace los cálculos.
+ * Llama al proxy /api/groq con el modelo de visión llama-4-scout.
+ * Envía las imágenes de las páginas + el texto digital (si existe).
+ * El modelo lee tanto texto impreso como MANUSCRITO.
+ * Devuelve un array de registros {fecha, ingreso, salida}; JS calcula las horas.
  */
-async function extractHoursWithGroq(pdfText, onProgress) {
-  onProgress(55, 'Extrayendo registros con IA…');
+async function extractHoursWithGroq(pdfText, images, onProgress) {
+  onProgress(55, 'Analizando PDF con visión IA…');
 
-  const textChunk = pdfText.length > 8000
-    ? pdfText.slice(0, 8000) + '\n[...truncado...]'
-    : pdfText;
-
-  // Groq SOLO extrae datos crudos — NO calcula nada
   const systemPrompt =
-`Extrae TODOS los registros de tiempo del texto del PDF.
+`Eres un experto en lectura de documentos de nómina colombiana.
+Analizarás imágenes de un "REPORTE DE HORAS EXTRAS" que puede contener texto impreso Y texto escrito a mano.
+
+Tu tarea: extraer TODOS los registros de tiempo visibles, tanto impresos como manuscritos.
+
 Devuelve ÚNICAMENTE un JSON array con el formato exacto:
 [{"fecha":"DD/MM/YYYY","ingreso":"HH:MM","salida":"HH:MM"}]
 
-Reglas de conversión:
+Reglas:
 - Convierte AM/PM a 24h: "04:09 AM"→"04:09", "05:00 PM"→"17:00", "10:21 PM"→"22:21"
-- "12:00 PM" = "12:00", "12:00 AM" = "00:00"
-- "23:59 PM" → "23:59", "00:00 AM" → "00:00"
-- Mantén fechas como aparecen en formato DD/MM/YYYY
-- Incluye TODAS las filas con HORA INGRESO y HORA SALIDA
-- No incluyas filas sin horas (encabezados, totales, etc.)
+- "12:00 PM" = "12:00", "12:00 AM" = "00:00", "23:59 PM" → "23:59"
+- Incluye TODAS las filas con HORA INGRESO y HORA SALIDA (impresas y manuscritas)
+- Ignora encabezados, totales, observaciones
 - Sin markdown, sin explicaciones. Solo el array JSON.`;
 
-  // Llama al proxy serverless — la API key la agrega el servidor
+  // Construir contenido multimodal: texto digital + imágenes
+  const userContent = [];
+
+  if (pdfText.trim()) {
+    userContent.push({
+      type: 'text',
+      text: `Texto digital extraído del PDF (puede estar incompleto si hay texto manuscrito):\n\n${pdfText.slice(0, 4000)}`,
+    });
+  }
+
+  // Añadir imágenes de las páginas (máx 4 para no superar tokens)
+  images.slice(0, 4).forEach((b64, i) => {
+    userContent.push({
+      type: 'text',
+      text: `Página ${i + 1} del documento:`,
+    });
+    userContent.push({
+      type: 'image_url',
+      image_url: { url: `data:image/jpeg;base64,${b64}` },
+    });
+  });
+
+  userContent.push({
+    type: 'text',
+    text: 'Extrae todos los registros de HORA INGRESO y HORA SALIDA (incluyendo los escritos a mano) y devuelve el array JSON.',
+  });
+
   const response = await fetch('/api/groq', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
+      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user',   content: `Texto del PDF:\n\n${textChunk}` },
+        { role: 'user',   content: userContent },
       ],
       temperature: 0,
       max_tokens: 1024,
@@ -388,25 +441,24 @@ Reglas de conversión:
     throw new Error(err?.error?.message || `HTTP ${response.status}`);
   }
 
-  onProgress(80, 'Calculando horas…');
+  onProgress(85, 'Calculando horas…');
 
   const data    = await response.json();
   const content = data.choices?.[0]?.message?.content?.trim() || '';
 
-  console.group('🤖 Groq – Registros extraídos');
+  console.group('🤖 Groq Visión – Registros extraídos');
   console.log('Raw:', content);
+  console.log('Tokens:', data.usage);
   console.groupEnd();
 
-  // Extraer JSON array
   const arrMatch = content.match(/\[[\s\S]*\]/);
-  if (!arrMatch) throw new Error(`Groq no devolvió un array. Respuesta: ${content.slice(0, 200)}`);
+  if (!arrMatch) throw new Error(`Groq no devolvió array. Respuesta: ${content.slice(0, 200)}`);
 
   const registros = JSON.parse(arrMatch[0]);
   console.log('Registros parseados:', registros);
 
   if (!Array.isArray(registros) || registros.length === 0) return null;
 
-  // JS hace todos los cálculos con precisión exacta
   return calcularDesdeRegistros(registros);
 }
 
@@ -547,44 +599,42 @@ function initUploadZone() {
     setProgress(5, 'Iniciando lectura del PDF…');
 
     try {
-      // 1. Extraer texto con PDF.js
-      const text = await extractTextFromPDF(file, (pct, msg) => setProgress(pct, msg));
+      // 1. Extraer texto digital + obtener objeto PDF
+      const { text, pdf } = await extractTextFromPDF(file, (pct, msg) => setProgress(pct, msg));
 
-      console.group('📄 LaborCalc – Texto extraído del PDF');
+      console.group('📄 LaborCalc – Texto digital extraído');
       console.log(`Longitud: ${text.length} caracteres`);
-      console.log('Primeros 2000 caracteres:\n', text.slice(0, 2000));
+      console.log('Primeros 1000 caracteres:\n', text.slice(0, 1000));
       console.groupEnd();
 
-      if (!text.trim()) {
-        showToast('El PDF no contiene texto seleccionable (puede ser una imagen escaneada).', 'error');
-        setProgress(0, 'PDF sin texto extraíble.');
-        setTimeout(() => parseStatus.classList.add('hidden'), 3000);
-        return;
-      }
+      // 2. Renderizar páginas a imágenes para OCR de manuscrito
+      setProgress(26, 'Preparando imágenes para OCR…');
+      const images = await renderPDFToImages(pdf, (pct, msg) => setProgress(pct, msg));
+      console.log(`🖼️ ${images.length} página(s) renderizadas para visión IA`);
 
-      // 2. Groq extrae registros → JS calcula horas
+      // 3. Groq visión extrae registros (texto impreso + manuscrito) → JS calcula
       let horas  = null;
       let usedAI = false;
 
-      setProgress(52, 'Conectando con Groq IA…');
+      setProgress(52, 'Analizando con visión IA (texto + manuscrito)…');
       try {
-        const groqResult = await extractHoursWithGroq(text, (pct, msg) => setProgress(pct, msg));
+        const groqResult = await extractHoursWithGroq(text, images, (pct, msg) => setProgress(pct, msg));
         const groqTotal  = groqResult ? Object.values(groqResult).reduce((s, v) => s + v, 0) : 0;
-        console.log('✅ Groq devolvió:', groqResult, '| Total horas:', groqTotal);
+        console.log('✅ Groq visión devolvió:', groqResult, '| Total horas:', groqTotal);
         if (groqResult && groqTotal > 0) {
           horas  = groqResult;
           usedAI = true;
         } else {
-          console.warn('Groq respondió con 0 horas. Usando regex como fallback.');
+          console.warn('Groq visión respondió con 0 horas. Usando regex como fallback.');
         }
       } catch (groqErr) {
         console.error('❌ Groq error:', groqErr.message);
         showToast(`⚠️ Groq: ${groqErr.message}. Usando detección clásica…`, 'info');
       }
 
-      // 3. Fallback: regex
+      // 4. Fallback: regex sobre el texto digital
       if (!horas) {
-        setProgress(80, 'Analizando con detector clásico…');
+        setProgress(90, 'Analizando con detector clásico…');
         horas = parseHoursFromText(text);
         console.log('🔍 Resultado regex:', horas);
       }
@@ -593,7 +643,7 @@ function initUploadZone() {
 
       if (horas) {
         fillHoursInputs(horas);
-        const method = usedAI ? '✨ IA Groq' : '🔍 Detección automática';
+        const method = usedAI ? '✨ IA Groq (visión + OCR)' : '🔍 Detección automática';
         showToast(`${method}: horas autocompletadas correctamente.`, 'success');
       } else {
         showToast('No se detectaron horas. Completa el formulario manual.', 'info');

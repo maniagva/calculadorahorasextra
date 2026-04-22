@@ -9,6 +9,11 @@
  * por lo que la clave nunca queda expuesta en el código fuente.
  */
 
+// Aumentar límite de body para soportar imágenes base64 (hasta ~10 MB)
+export const config = {
+  api: { bodyParser: { sizeLimit: '10mb' } },
+};
+
 export default async function handler(req, res) {
   // Solo permitir POST
   if (req.method !== 'POST') {
