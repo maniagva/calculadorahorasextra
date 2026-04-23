@@ -374,7 +374,7 @@ function calcularDesdeRegistros(registros) {
  * Llama al proxy /api/groq con el modelo de visión llama-4-scout.
  * Envía las imágenes de las páginas + el texto digital (si existe).
  * El modelo lee tanto texto impreso como MANUSCRITO.
- * Devuelve un array de registros {fecha, ingreso, salida}; JS calcula las horas.
+ * Devuelve {horas: HorasInput, nombre: string} — JS calcula las horas.
  */
 async function extractHoursWithGroq(pdfText, images, onProgress) {
   onProgress(55, 'Analizando PDF con visión IA…');
@@ -383,17 +383,22 @@ async function extractHoursWithGroq(pdfText, images, onProgress) {
 `Eres un experto en lectura de documentos de nómina colombiana.
 Analizarás imágenes de un "REPORTE DE HORAS EXTRAS" que puede contener texto impreso Y texto escrito a mano.
 
-Tu tarea: extraer TODOS los registros de tiempo visibles, tanto impresos como manuscritos.
+Tu tarea: extraer el nombre del empleado Y todos los registros de tiempo visibles.
 
-Devuelve ÚNICAMENTE un JSON array con el formato exacto:
-[{"fecha":"DD/MM/YYYY","ingreso":"HH:MM","salida":"HH:MM"}]
+Devuelve ÚNICAMENTE un objeto JSON con el formato exacto:
+{
+  "nombre": "Nombre completo del empleado",
+  "registros": [{"fecha":"DD/MM/YYYY","ingreso":"HH:MM","salida":"HH:MM"}]
+}
 
 Reglas:
+- Busca el nombre en campos como "NOMBRES Y APELLIDOS", "EMPLEADO", "TRABAJADOR", o similar
 - Convierte AM/PM a 24h: "04:09 AM"→"04:09", "05:00 PM"→"17:00", "10:21 PM"→"22:21"
 - "12:00 PM" = "12:00", "12:00 AM" = "00:00", "23:59 PM" → "23:59"
 - Incluye TODAS las filas con HORA INGRESO y HORA SALIDA (impresas y manuscritas)
-- Ignora encabezados, totales, observaciones
-- Sin markdown, sin explicaciones. Solo el array JSON.`;
+- Ignora encabezados de tabla, totales, observaciones
+- Si no encuentras el nombre, usa cadena vacía ""
+- Sin markdown, sin explicaciones. Solo el JSON.`;
 
   // Construir contenido multimodal: texto digital + imágenes
   const userContent = [];
@@ -405,21 +410,14 @@ Reglas:
     });
   }
 
-  // Añadir imágenes de las páginas (máx 4 para no superar tokens)
   images.slice(0, 4).forEach((b64, i) => {
-    userContent.push({
-      type: 'text',
-      text: `Página ${i + 1} del documento:`,
-    });
-    userContent.push({
-      type: 'image_url',
-      image_url: { url: `data:image/jpeg;base64,${b64}` },
-    });
+    userContent.push({ type: 'text', text: `Página ${i + 1} del documento:` });
+    userContent.push({ type: 'image_url', image_url: { url: `data:image/jpeg;base64,${b64}` } });
   });
 
   userContent.push({
     type: 'text',
-    text: 'Extrae todos los registros de HORA INGRESO y HORA SALIDA (incluyendo los escritos a mano) y devuelve el array JSON.',
+    text: 'Extrae el nombre del empleado y todos los registros de HORA INGRESO/HORA SALIDA. Devuelve el JSON.',
   });
 
   const response = await fetch('/api/groq', {
@@ -446,20 +444,25 @@ Reglas:
   const data    = await response.json();
   const content = data.choices?.[0]?.message?.content?.trim() || '';
 
-  console.group('🤖 Groq Visión – Registros extraídos');
+  console.group('🤖 Groq Visión – Datos extraídos');
   console.log('Raw:', content);
   console.log('Tokens:', data.usage);
   console.groupEnd();
 
-  const arrMatch = content.match(/\[[\s\S]*\]/);
-  if (!arrMatch) throw new Error(`Groq no devolvió array. Respuesta: ${content.slice(0, 200)}`);
+  // Parsear el objeto JSON {nombre, registros}
+  const objMatch = content.match(/\{[\s\S]*\}/);
+  if (!objMatch) throw new Error(`Groq no devolvió JSON. Respuesta: ${content.slice(0, 200)}`);
 
-  const registros = JSON.parse(arrMatch[0]);
+  const parsed   = JSON.parse(objMatch[0]);
+  const nombre   = (parsed.nombre || '').trim();
+  const registros = parsed.registros;
+
+  console.log('Nombre extraído:', nombre);
   console.log('Registros parseados:', registros);
 
-  if (!Array.isArray(registros) || registros.length === 0) return null;
+  if (!Array.isArray(registros) || registros.length === 0) return { horas: null, nombre };
 
-  return calcularDesdeRegistros(registros);
+  return { horas: calcularDesdeRegistros(registros), nombre };
 }
 
 /**
@@ -612,17 +615,20 @@ function initUploadZone() {
       const images = await renderPDFToImages(pdf, (pct, msg) => setProgress(pct, msg));
       console.log(`🖼️ ${images.length} página(s) renderizadas para visión IA`);
 
-      // 3. Groq visión extrae registros (texto impreso + manuscrito) → JS calcula
-      let horas  = null;
-      let usedAI = false;
+      // 3. Groq visión extrae nombre + registros (texto impreso + manuscrito) → JS calcula
+      let horas   = null;
+      let nombre  = '';
+      let usedAI  = false;
 
       setProgress(52, 'Analizando con visión IA (texto + manuscrito)…');
       try {
         const groqResult = await extractHoursWithGroq(text, images, (pct, msg) => setProgress(pct, msg));
-        const groqTotal  = groqResult ? Object.values(groqResult).reduce((s, v) => s + v, 0) : 0;
-        console.log('✅ Groq visión devolvió:', groqResult, '| Total horas:', groqTotal);
-        if (groqResult && groqTotal > 0) {
-          horas  = groqResult;
+        const groqHoras  = groqResult?.horas;
+        nombre           = groqResult?.nombre || '';
+        const groqTotal  = groqHoras ? Object.values(groqHoras).reduce((s, v) => s + v, 0) : 0;
+        console.log('✅ Groq visión devolvió:', groqHoras, '| Nombre:', nombre, '| Total horas:', groqTotal);
+        if (groqHoras && groqTotal > 0) {
+          horas  = groqHoras;
           usedAI = true;
         } else {
           console.warn('Groq visión respondió con 0 horas. Usando regex como fallback.');
@@ -643,8 +649,12 @@ function initUploadZone() {
 
       if (horas) {
         fillHoursInputs(horas);
+        // Guardar el nombre en un data attribute del botón de calcular
+        // para que renderResults y el export lo tengan disponible
+        document.getElementById('calculate-btn').dataset.nombre = nombre;
         const method = usedAI ? '✨ IA Groq (visión + OCR)' : '🔍 Detección automática';
-        showToast(`${method}: horas autocompletadas correctamente.`, 'success');
+        const nombreMsg = nombre ? ` · ${nombre}` : '';
+        showToast(`${method}${nombreMsg}: horas autocompletadas correctamente.`, 'success');
       } else {
         showToast('No se detectaron horas. Completa el formulario manual.', 'info');
       }
@@ -691,7 +701,15 @@ function renderResults({ lineas, total, totalHoras, horaOrdinaria }) {
   const emptyState    = document.getElementById('empty-state');
   const resultsContent= document.getElementById('results-content');
   const tbody         = document.getElementById('breakdown-tbody');
-  const grandTotal    = document.getElementById('table-grand-total');
+  const grandTotal    = document.getElementById('grand-total-display');
+
+  // Nombre del empleado (guardado por handleFile en data attribute)
+  const nombre = document.getElementById('calculate-btn').dataset.nombre || '';
+  const nombreEl = document.getElementById('result-employee-name');
+  if (nombreEl) {
+    nombreEl.textContent = nombre || '';
+    nombreEl.closest('.result-employee-row').classList.toggle('hidden', !nombre);
+  }
 
   // Metrics
   document.getElementById('metric-hora-ordinaria').textContent = formatCOP(horaOrdinaria);
@@ -701,7 +719,7 @@ function renderResults({ lineas, total, totalHoras, horaOrdinaria }) {
   // Breakdown rows
   tbody.innerHTML = '';
   lineas.forEach((linea) => {
-    if (linea.horas === 0) return;  // omitir filas en cero
+    if (linea.horas === 0) return;
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>
@@ -714,7 +732,6 @@ function renderResults({ lineas, total, totalHoras, horaOrdinaria }) {
     tbody.appendChild(tr);
   });
 
-  // Si todas las filas son cero, mostrar mensaje
   if (tbody.children.length === 0) {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td colspan="5" style="text-align:center;color:var(--color-text-dim);padding:1.5rem">
@@ -722,9 +739,10 @@ function renderResults({ lineas, total, totalHoras, horaOrdinaria }) {
     tbody.appendChild(tr);
   }
 
-  grandTotal.innerHTML = `<strong>${formatCOP(total)}</strong>`;
+  // Grand total — buscar el elemento correcto
+  const grandTotalEl = document.getElementById('table-grand-total');
+  if (grandTotalEl) grandTotalEl.innerHTML = `<strong>${formatCOP(total)}</strong>`;
 
-  // Show results, hide empty
   emptyState.classList.add('hidden');
   resultsContent.classList.remove('hidden');
 }
@@ -787,10 +805,14 @@ function initExportButton() {
     const totalHoras = document.getElementById('metric-total-horas').textContent;
     const fecha      = new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
 
+    const nombre    = document.getElementById('calculate-btn').dataset.nombre || '';
     let txt = `═══════════════════════════════════════════\n`;
     txt     += `  LIQUIDACIÓN DE HORAS EXTRA – LABORCALC\n`;
     txt     += `  Fecha: ${fecha}\n`;
     txt     += `═══════════════════════════════════════════\n\n`;
+    if (nombre) {
+    txt     += `Empleado            : ${nombre}\n`;
+    }
     txt     += `Salario mensual     : ${formatCOP(salary)}\n`;
     txt     += `Jornada semanal     : ${jornada} horas\n`;
     txt     += `Valor hora ordinaria: ${formatCOP(horaOrd)}\n\n`;
