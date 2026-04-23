@@ -329,8 +329,9 @@ function inter(a, b, c, d) {
  * @param {Array}  registros   [{fecha, ingreso, salida}]
  * @param {number} schedInicio minutos desde medianoche (ej. 480 = 08:00)
  * @param {number} schedFin    minutos desde medianoche (ej. 1020 = 17:00)
+ * @param {number[]} workDays  días laborales (0=Dom…6=Sáb). El resto son días de descanso.
  */
-function calcularDesdeRegistros(registros, schedInicio = 480, schedFin = 1020) {
+function calcularDesdeRegistros(registros, schedInicio = 480, schedFin = 1020, workDays = [1,2,3,4,5,6]) {
   const D_I = 360;    // 06:00 AM
   const D_F = 1140;   // 07:00 PM
   const DIA = 1440;   // 24 × 60
@@ -344,7 +345,7 @@ function calcularDesdeRegistros(registros, schedInicio = 480, schedFin = 1020) {
   registros.forEach(reg => {
     const [dd, mm, yyyy] = reg.fecha.split('/').map(Number);
     const fecha   = new Date(yyyy, mm - 1, dd);
-    const esDesc  = fecha.getDay() === 0 || FESTIVOS_CO.has(reg.fecha);
+    const esDesc = FESTIVOS_CO.has(reg.fecha) || !workDays.includes(fecha.getDay());
 
     let ini = toMin(reg.ingreso);
     let fin = toMin(reg.salida);
@@ -410,7 +411,7 @@ function calcularDesdeRegistros(registros, schedInicio = 480, schedFin = 1020) {
  * El modelo lee tanto texto impreso como MANUSCRITO.
  * Devuelve {horas: HorasInput, nombre: string} — JS calcula las horas.
  */
-async function extractHoursWithGroq(pdfText, images, onProgress, schedInicio = 480, schedFin = 1020) {
+async function extractHoursWithGroq(pdfText, images, onProgress, schedInicio = 480, schedFin = 1020, workDays = [1,2,3,4,5,6]) {
   onProgress(55, 'Analizando PDF con visión IA…');
 
   const systemPrompt =
@@ -496,8 +497,8 @@ Reglas:
 
   if (!Array.isArray(registros) || registros.length === 0) return { horas: null, nombre };
 
-  // Pasar el horario laboral para diferenciar extras de horas ordinarias
-  return { horas: calcularDesdeRegistros(registros, schedInicio, schedFin), nombre };
+  // Pasar el horario laboral y los días de descanso para clasificar correctamente
+  return { horas: calcularDesdeRegistros(registros, schedInicio, schedFin, workDays), nombre };
 }
 
 /**
@@ -543,16 +544,28 @@ function parseHoursFromText(text) {
 }
 
 /**
- * Lee los inputs de horario habitual y devuelve {schedInicio, schedFin} en minutos.
+ * Lee los inputs de jornada y devuelve {schedInicio, schedFin, workDays}.
+ * workDays: array de números de día (0=Dom, 1=Lun ... 6=Sáb) que son laborables.
  */
 function getScheduleMinutes() {
   const startVal = document.getElementById('schedule-start')?.value || '08:00';
   const endVal   = document.getElementById('schedule-end')?.value   || '17:00';
+  const daysVal  = document.getElementById('work-days-select')?.value || 'lun-sab';
+
   const [sh, sm] = startVal.split(':').map(Number);
   const [eh, em] = endVal.split(':').map(Number);
+
+  // 0=Dom 1=Lun 2=Mar 3=Mié 4=Jue 5=Vie 6=Sáb
+  const daysMap = {
+    'lun-vie': [1, 2, 3, 4, 5],
+    'lun-sab': [1, 2, 3, 4, 5, 6],
+    'lun-dom': [0, 1, 2, 3, 4, 5, 6],
+  };
+
   return {
     schedInicio: sh * 60 + sm,
     schedFin:    eh * 60 + em,
+    workDays:    daysMap[daysVal] || [1, 2, 3, 4, 5, 6],
   };
 }
 
@@ -669,14 +682,15 @@ function initUploadZone() {
       let nombre  = '';
       let usedAI  = false;
 
-      // Leer horario laboral habitual del formulario
-      const { schedInicio, schedFin } = getScheduleMinutes();
+      // Leer jornada habitual del formulario
+      const { schedInicio, schedFin, workDays } = getScheduleMinutes();
       const hStr = m => `${Math.floor(m/60).toString().padStart(2,'0')}:${(m%60).toString().padStart(2,'0')}`;
-      console.log(`🕐 Horario habitual: ${hStr(schedInicio)} – ${hStr(schedFin)}`);
+      const dayNames = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+      console.log(`🗓️ Días laborales: ${workDays.map(d => dayNames[d]).join(', ')} | 🕐 ${hStr(schedInicio)}–${hStr(schedFin)}`);
 
       setProgress(52, 'Analizando con visión IA (texto + manuscrito)…');
       try {
-        const groqResult = await extractHoursWithGroq(text, images, (pct, msg) => setProgress(pct, msg), schedInicio, schedFin);
+        const groqResult = await extractHoursWithGroq(text, images, (pct, msg) => setProgress(pct, msg), schedInicio, schedFin, workDays);
         const groqHoras  = groqResult?.horas;
         nombre           = groqResult?.nombre || '';
         const groqTotal  = groqHoras ? Object.values(groqHoras).reduce((s, v) => s + v, 0) : 0;
