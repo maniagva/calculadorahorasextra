@@ -800,6 +800,34 @@ body {
   color: var(--color-text-dim);
 }
 
+/* ── SCHEDULE ROW (horario habitual) ─────────────────── */
+.schedule-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.form-input--time {
+  cursor: pointer;
+  /* Mostrar el reloj nativo con el color del tema */
+  color-scheme: dark;
+}
+
+.schedule-hint {
+  font-size: 0.72rem;
+  color: var(--color-text-dim);
+  margin-top: 0.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.schedule-hint::before {
+  content: '⚡';
+  font-size: 0.75rem;
+}
+
 /* ── EMPLOYEE NAME ROW (results) ──────────────────────── */
 .result-employee-row {
   display: flex;

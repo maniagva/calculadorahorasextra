@@ -78,6 +78,24 @@
             <option value="42" selected>42 h/semana (2026 en adelante)</option>
           </select>
         </div>
+
+        <div class="schedule-row">
+          <div class="form-group">
+            <label for="schedule-start" class="form-label">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Inicio jornada habitual
+            </label>
+            <input id="schedule-start" type="time" class="form-input form-input--time" value="08:00"/>
+          </div>
+          <div class="form-group">
+            <label for="schedule-end" class="form-label">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Fin jornada habitual
+            </label>
+            <input id="schedule-end" type="time" class="form-input form-input--time" value="17:00"/>
+          </div>
+        </div>
+        <p class="schedule-hint">Usado para separar horas ordinarias de extras en el PDF</p>
       </div>
 
       <!-- STEP 2: PDF Upload -->

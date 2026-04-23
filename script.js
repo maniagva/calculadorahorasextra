@@ -314,19 +314,26 @@ function inter(a, b, c, d) {
 }
 
 /**
- * Calcula las horas por categoría a partir de registros {fecha, ingreso, salida}.
- * Toda la aritmética se hace en JavaScript (no en el LLM).
+ * Clasifica las horas de cada registro en 7 categorías usando álgebra de conjuntos.
  *
- * Reglas CST Colombia:
- *  - Diurno: 06:00–19:00
- *  - Nocturno: 19:00–06:00
- *  - Todos los registros del reporte son horas EXTRA (desplazamientos fuera de la jornada)
- *  - Si la fecha es domingo o festivo → recargo dominical
+ * Para cada turno [ini, fin] se calculan 4 cuadrantes:
+ *
+ *          │ Dentro del horario │ Fuera del horario
+ * ─────────┼────────────────────┼──────────────────
+ * Diurno   │ Horas ordinarias   │ extraDiurna / extraDominicalDiurno
+ * Nocturno │ recargoNocturno    │ extraNocturna / extraDominicalNocturno
+ *
+ * En días domingo/festivo, las horas ordinarias se cuentan como
+ * dominicalDiurno / dominicalNocturno.
+ *
+ * @param {Array}  registros   [{fecha, ingreso, salida}]
+ * @param {number} schedInicio minutos desde medianoche (ej. 480 = 08:00)
+ * @param {number} schedFin    minutos desde medianoche (ej. 1020 = 17:00)
  */
-function calcularDesdeRegistros(registros) {
-  const D_I = 360;   // 06:00 en minutos
-  const D_F = 1140;  // 19:00 en minutos
-  const DIA = 1440;  // 24 * 60
+function calcularDesdeRegistros(registros, schedInicio = 480, schedFin = 1020) {
+  const D_I = 360;    // 06:00 AM
+  const D_F = 1140;   // 07:00 PM
+  const DIA = 1440;   // 24 × 60
 
   const acc = {
     extraDiurna: 0, extraNocturna: 0, recargoNocturno: 0,
@@ -335,7 +342,6 @@ function calcularDesdeRegistros(registros) {
   };
 
   registros.forEach(reg => {
-    // Determinar si es domingo o festivo
     const [dd, mm, yyyy] = reg.fecha.split('/').map(Number);
     const fecha   = new Date(yyyy, mm - 1, dd);
     const esDesc  = fecha.getDay() === 0 || FESTIVOS_CO.has(reg.fecha);
@@ -344,28 +350,56 @@ function calcularDesdeRegistros(registros) {
     let fin = toMin(reg.salida);
     if (fin <= ini) fin += DIA; // cruce de medianoche
 
-    // Segmentos diurnos en el turno (puede abarcar hasta 2 días)
-    const diurnoMin =
-      inter(ini, fin, D_I, D_F) +
-      inter(ini, fin, DIA + D_I, DIA + D_F);
+    const duracion = fin - ini;
 
-    // Segmentos nocturnos
-    const nocturnoMin =
-      inter(ini, fin, 0, D_I) +
-      inter(ini, fin, D_F, DIA) +
-      inter(ini, fin, DIA, DIA + D_I) +
-      inter(ini, fin, DIA + D_F, 2 * DIA);
+    /*
+     * Cálculo de intersecciones (maneja cruce de medianoche con offset DIA):
+     *   inS  = minutos dentro del horario laboral habitual
+     *   inD  = minutos dentro del horario diurno (6AM-7PM)
+     *   inSD = minutos dentro del horario laboral Y diurno (intersección triple)
+     */
+    const inS =
+      inter(ini, fin, schedInicio,       schedFin) +
+      inter(ini, fin, schedInicio + DIA, schedFin + DIA);
+
+    const inD =
+      inter(ini, fin, D_I,       D_F) +
+      inter(ini, fin, D_I + DIA, D_F + DIA);
+
+    // Intersección del horario habitual con el horario diurno
+    const sdI = Math.max(schedInicio, D_I);
+    const sdF = Math.min(schedFin,    D_F);
+    const inSD = (sdI < sdF)
+      ? inter(ini, fin, sdI,       sdF) +
+        inter(ini, fin, sdI + DIA, sdF + DIA)
+      : 0;
+
+    /*
+     * Los 4 cuadrantes (en minutos):
+     *   regDay   = ordinario diurno  → no se liquida como extra
+     *   regNight = ordinario nocturno → recargo nocturno (RN, +35%)
+     *   extDay   = extra diurno      → HED (+25%) o HEDD (+100%)
+     *   extNight = extra nocturno    → HEN (+75%) o HEDN (+150%)
+     */
+    const regDay   = inSD;
+    const regNight = inS - inSD;
+    const extDay   = inD - inSD;
+    const extNight = duracion - inS - inD + inSD;
 
     if (esDesc) {
-      acc.extraDominicalDiurno  += diurnoMin  / 60;
-      acc.extraDominicalNocturno += nocturnoMin / 60;
+      // Domingo/festivo: las horas ordinarias también se pagan con recargo
+      acc.dominicalDiurno        += regDay   / 60;
+      acc.dominicalNocturno      += regNight / 60;
+      acc.extraDominicalDiurno   += extDay   / 60;
+      acc.extraDominicalNocturno += extNight / 60;
     } else {
-      acc.extraDiurna   += diurnoMin  / 60;
-      acc.extraNocturna += nocturnoMin / 60;
+      // Semana: las horas ordinarias diurnas no generan recargo
+      acc.recargoNocturno += regNight / 60;
+      acc.extraDiurna     += extDay   / 60;
+      acc.extraNocturna   += extNight / 60;
     }
   });
 
-  // Redondear a 2 decimales
   Object.keys(acc).forEach(k => { acc[k] = Math.round(acc[k] * 100) / 100; });
   return acc;
 }
@@ -376,7 +410,7 @@ function calcularDesdeRegistros(registros) {
  * El modelo lee tanto texto impreso como MANUSCRITO.
  * Devuelve {horas: HorasInput, nombre: string} — JS calcula las horas.
  */
-async function extractHoursWithGroq(pdfText, images, onProgress) {
+async function extractHoursWithGroq(pdfText, images, onProgress, schedInicio = 480, schedFin = 1020) {
   onProgress(55, 'Analizando PDF con visión IA…');
 
   const systemPrompt =
@@ -462,7 +496,8 @@ Reglas:
 
   if (!Array.isArray(registros) || registros.length === 0) return { horas: null, nombre };
 
-  return { horas: calcularDesdeRegistros(registros), nombre };
+  // Pasar el horario laboral para diferenciar extras de horas ordinarias
+  return { horas: calcularDesdeRegistros(registros, schedInicio, schedFin), nombre };
 }
 
 /**
@@ -505,6 +540,20 @@ function parseHoursFromText(text) {
   });
 
   return found ? acc : null;
+}
+
+/**
+ * Lee los inputs de horario habitual y devuelve {schedInicio, schedFin} en minutos.
+ */
+function getScheduleMinutes() {
+  const startVal = document.getElementById('schedule-start')?.value || '08:00';
+  const endVal   = document.getElementById('schedule-end')?.value   || '17:00';
+  const [sh, sm] = startVal.split(':').map(Number);
+  const [eh, em] = endVal.split(':').map(Number);
+  return {
+    schedInicio: sh * 60 + sm,
+    schedFin:    eh * 60 + em,
+  };
 }
 
 /**
@@ -620,9 +669,14 @@ function initUploadZone() {
       let nombre  = '';
       let usedAI  = false;
 
+      // Leer horario laboral habitual del formulario
+      const { schedInicio, schedFin } = getScheduleMinutes();
+      const hStr = m => `${Math.floor(m/60).toString().padStart(2,'0')}:${(m%60).toString().padStart(2,'0')}`;
+      console.log(`🕐 Horario habitual: ${hStr(schedInicio)} – ${hStr(schedFin)}`);
+
       setProgress(52, 'Analizando con visión IA (texto + manuscrito)…');
       try {
-        const groqResult = await extractHoursWithGroq(text, images, (pct, msg) => setProgress(pct, msg));
+        const groqResult = await extractHoursWithGroq(text, images, (pct, msg) => setProgress(pct, msg), schedInicio, schedFin);
         const groqHoras  = groqResult?.horas;
         nombre           = groqResult?.nombre || '';
         const groqTotal  = groqHoras ? Object.values(groqHoras).reduce((s, v) => s + v, 0) : 0;
