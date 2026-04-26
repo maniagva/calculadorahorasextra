@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Calculadora de Horas Extra Colombia | LaborCalc</title>
-  <meta name="description" content="Calcula automáticamente las horas extra, recargos nocturnos, dominicales y festivos de tus empleados según la legislación laboral colombiana." />
+  <meta name="description"
+    content="Calcula automáticamente las horas extra, recargos nocturnos, dominicales y festivos de tus empleados según la legislación laboral colombiana." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
 
   <!-- ── BACKGROUND PARTICLES ── -->
@@ -23,17 +27,18 @@
   <header class="hero">
     <div class="hero-inner">
       <div class="logo">
-        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect width="36" height="36" rx="10" fill="url(#logoGrad)"/>
-          <path d="M18 8a10 10 0 1 0 0 20A10 10 0 0 0 18 8zm0 3v7l5 3-1 1.7L16 19V11h2z" fill="white"/>
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true">
+          <rect width="36" height="36" rx="10" fill="url(#logoGrad)" />
+          <path d="M18 8a10 10 0 1 0 0 20A10 10 0 0 0 18 8zm0 3v7l5 3-1 1.7L16 19V11h2z" fill="white" />
           <defs>
             <linearGradient id="logoGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
-              <stop stop-color="#6C63FF"/>
-              <stop offset="1" stop-color="#3ECFCF"/>
+              <stop stop-color="#6C63FF" />
+              <stop offset="1" stop-color="#3ECFCF" />
             </linearGradient>
           </defs>
         </svg>
-        <span>LaborCalc</span>
+        <span>LaborCalc - Cálculo exacto de horas extra.</span>
       </div>
       <div class="hero-text">
         <h1>Calculadora de Horas Extra</h1>
@@ -57,14 +62,8 @@
           <label for="salary-input" class="form-label">Salario mensual (COP)</label>
           <div class="input-wrapper">
             <span class="input-prefix">$</span>
-            <input
-              id="salary-input"
-              type="text"
-              inputmode="numeric"
-              class="form-input"
-              placeholder="2.500.000"
-              autocomplete="off"
-            />
+            <input id="salary-input" type="text" inputmode="numeric" class="form-input" placeholder="2.500.000"
+              autocomplete="off" />
           </div>
           <span class="input-hint" id="hourly-preview"></span>
         </div>
@@ -82,19 +81,29 @@
         <div class="schedule-row">
           <div class="form-group">
             <label for="schedule-start" class="form-label">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
               Inicio jornada habitual
             </label>
-            <input id="schedule-start" type="time" class="form-input form-input--time" value="08:00"/>
+            <input id="schedule-start" type="time" class="form-input form-input--time" value="08:00" />
           </div>
           <div class="form-group">
             <label for="schedule-end" class="form-label">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
               Fin jornada habitual
             </label>
-            <input id="schedule-end" type="time" class="form-input form-input--time" value="17:00"/>
+            <input id="schedule-end" type="time" class="form-input form-input--time" value="17:00" />
           </div>
         </div>
+        <p class="schedule-hint">El horario laboral se tomara a partir de el horario de entrada y salida de lunes a
+          viernes y esta definido de las 7:00 AM a 5:00 PM</p>
         <p class="schedule-hint">Horas en sábado, domingo y festivos se liquidan con recargo dominical</p>
       </div>
 
@@ -102,19 +111,19 @@
       <div class="card step-card" id="card-upload">
         <div class="step-badge">2</div>
         <h2 class="card-title">Registro de horarios</h2>
-        <p class="card-subtitle" id="upload-subtitle">La IA de Groq analizará el PDF y extraerá las horas automáticamente.</p>
+        <p class="card-subtitle" id="upload-subtitle">La IA analizará el PDF y extraerá las horas automáticamente.</p>
 
         <div class="upload-zone" id="upload-zone" role="button" tabindex="0" aria-label="Subir archivo PDF">
           <div class="upload-icon" aria-hidden="true">
             <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-              <path d="M24 4L36 14H28V30H20V14H12L24 4Z" fill="currentColor" opacity=".8"/>
-              <rect x="8" y="36" width="32" height="4" rx="2" fill="currentColor" opacity=".4"/>
+              <path d="M24 4L36 14H28V30H20V14H12L24 4Z" fill="currentColor" opacity=".8" />
+              <rect x="8" y="36" width="32" height="4" rx="2" fill="currentColor" opacity=".4" />
             </svg>
           </div>
           <p class="upload-title">Arrastra tu PDF aquí</p>
           <p class="upload-sub">o <span class="upload-link" id="upload-trigger">selecciona un archivo</span></p>
           <p class="upload-formats">Formato: PDF con tabla de horarios · Extracción con IA</p>
-          <input type="file" id="pdf-file-input" accept=".pdf" style="display:none;" aria-hidden="true"/>
+          <input type="file" id="pdf-file-input" accept=".pdf" style="display:none;" aria-hidden="true" />
         </div>
 
         <!-- File Info -->
@@ -140,7 +149,8 @@
       <div class="card step-card" id="card-manual">
         <div class="step-badge">3</div>
         <h2 class="card-title">Ajuste manual de horas</h2>
-        <p class="card-subtitle">Edita o ingresa horas directamente si el PDF no fue detectado correctamente por la IA.</p>
+        <p class="card-subtitle">Edita o ingresa horas directamente si el PDF no fue detectado correctamente por la IA.
+        </p>
 
         <div class="hours-grid">
 
@@ -148,11 +158,11 @@
             <h3 class="hours-group-title">⏱ Horas extra diurnas</h3>
             <div class="form-group">
               <label for="extra-diurna" class="form-label">Días de semana (6 AM – 7 PM)</label>
-              <input id="extra-diurna" type="number" class="form-input" placeholder="0" min="0" step="0.5"/>
+              <input id="extra-diurna" type="number" class="form-input" placeholder="0" min="0" step="0.5" />
             </div>
             <div class="form-group">
               <label for="extra-diurna-dom" class="form-label">Dominicales/Festivos diurnos</label>
-              <input id="extra-diurna-dom" type="number" class="form-input" placeholder="0" min="0" step="0.5"/>
+              <input id="extra-diurna-dom" type="number" class="form-input" placeholder="0" min="0" step="0.5" />
             </div>
           </div>
 
@@ -160,11 +170,11 @@
             <h3 class="hours-group-title">🌙 Horas extra nocturnas</h3>
             <div class="form-group">
               <label for="extra-nocturna" class="form-label">Días de semana (7 PM – 6 AM)</label>
-              <input id="extra-nocturna" type="number" class="form-input" placeholder="0" min="0" step="0.5"/>
+              <input id="extra-nocturna" type="number" class="form-input" placeholder="0" min="0" step="0.5" />
             </div>
             <div class="form-group">
               <label for="extra-nocturna-dom" class="form-label">Dominicales/Festivos nocturnos</label>
-              <input id="extra-nocturna-dom" type="number" class="form-input" placeholder="0" min="0" step="0.5"/>
+              <input id="extra-nocturna-dom" type="number" class="form-input" placeholder="0" min="0" step="0.5" />
             </div>
           </div>
 
@@ -172,23 +182,24 @@
             <h3 class="hours-group-title">🔆 Recargos (sin hora extra)</h3>
             <div class="form-group">
               <label for="recargo-nocturno" class="form-label">Recargo nocturno ordinario</label>
-              <input id="recargo-nocturno" type="number" class="form-input" placeholder="0" min="0" step="0.5"/>
+              <input id="recargo-nocturno" type="number" class="form-input" placeholder="0" min="0" step="0.5" />
             </div>
             <div class="form-group">
               <label for="recargo-dominical" class="form-label">Dominical/Festivo diurno ordinario</label>
-              <input id="recargo-dominical" type="number" class="form-input" placeholder="0" min="0" step="0.5"/>
+              <input id="recargo-dominical" type="number" class="form-input" placeholder="0" min="0" step="0.5" />
             </div>
             <div class="form-group">
               <label for="recargo-nocturno-dom" class="form-label">Dominical/Festivo nocturno ordinario</label>
-              <input id="recargo-nocturno-dom" type="number" class="form-input" placeholder="0" min="0" step="0.5"/>
+              <input id="recargo-nocturno-dom" type="number" class="form-input" placeholder="0" min="0" step="0.5" />
             </div>
           </div>
         </div>
 
         <button class="btn btn-primary" id="calculate-btn">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-            <rect x="2" y="2" width="20" height="20" rx="3"/>
-            <path d="M8 7h8M8 12h8M8 17h4"/>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+            aria-hidden="true">
+            <rect x="2" y="2" width="20" height="20" rx="3" />
+            <path d="M8 7h8M8 12h8M8 17h4" />
           </svg>
           Calcular horas extra
         </button>
@@ -213,10 +224,11 @@
           <div class="results-header">
             <h2 class="results-title">Resumen de liquidación</h2>
             <button class="btn btn-ghost btn-sm" id="export-btn" title="Exportar como texto">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7 10 12 15 17 10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
               Exportar
             </button>
@@ -224,9 +236,10 @@
 
           <!-- Nombre del empleado (extraído del PDF por IA) -->
           <div class="result-employee-row hidden">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-              <circle cx="12" cy="7" r="4"/>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              aria-hidden="true">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
             </svg>
             <span class="result-employee-label">Empleado:</span>
             <span class="result-employee-name" id="result-employee-name"></span>
@@ -277,10 +290,14 @@
 
           <!-- Legal Note -->
           <div class="legal-note">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
-            <span>Cálculos basados en el Código Sustantivo del Trabajo colombiano y la Ley 2101 de 2021. Este resultado es orientativo; se recomienda verificar con un profesional de nómina.</span>
+            <span>Cálculos basados en el Código Sustantivo del Trabajo colombiano y la Ley 2101 de 2021. Este resultado
+              es orientativo; se recomienda verificar con un profesional de nómina.</span>
           </div>
         </div>
       </div>
@@ -291,16 +308,48 @@
         <div class="reference-table-wrapper">
           <table class="reference-table">
             <thead>
-              <tr><th>Tipo de hora</th><th>Recargo</th><th>Factor</th></tr>
+              <tr>
+                <th>Tipo de hora</th>
+                <th>Recargo</th>
+                <th>Factor</th>
+              </tr>
             </thead>
             <tbody>
-              <tr><td>Hora extra diurna (HC+HD)</td><td>+25%</td><td>1.25×</td></tr>
-              <tr><td>Hora extra nocturna (HC+HN)</td><td>+75%</td><td>1.75×</td></tr>
-              <tr><td>Recargo nocturno ordinario</td><td>+35%</td><td>1.35×</td></tr>
-              <tr><td>Dominical/Festivo diurno ordinario</td><td>+75%</td><td>1.75×</td></tr>
-              <tr><td>Dominical/Festivo nocturno ordinario</td><td>+110%</td><td>2.10×</td></tr>
-              <tr><td>Hora extra dominical/festiva diurna</td><td>+100%</td><td>2.00×</td></tr>
-              <tr><td>Hora extra dominical/festiva nocturna</td><td>+150%</td><td>2.50×</td></tr>
+              <tr>
+                <td>Hora extra diurna (HC+HD)</td>
+                <td>+25%</td>
+                <td>1.25×</td>
+              </tr>
+              <tr>
+                <td>Hora extra nocturna (HC+HN)</td>
+                <td>+75%</td>
+                <td>1.75×</td>
+              </tr>
+              <tr>
+                <td>Recargo nocturno ordinario</td>
+                <td>+35%</td>
+                <td>1.35×</td>
+              </tr>
+              <tr>
+                <td>Dominical/Festivo diurno ordinario</td>
+                <td>+75%</td>
+                <td>1.75×</td>
+              </tr>
+              <tr>
+                <td>Dominical/Festivo nocturno ordinario</td>
+                <td>+110%</td>
+                <td>2.10×</td>
+              </tr>
+              <tr>
+                <td>Hora extra dominical/festiva diurna</td>
+                <td>+100%</td>
+                <td>2.00×</td>
+              </tr>
+              <tr>
+                <td>Hora extra dominical/festiva nocturna</td>
+                <td>+150%</td>
+                <td>2.50×</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -315,11 +364,12 @@
     <div class="footer-inner">
       <div class="footer-brand">
         <svg width="18" height="18" viewBox="0 0 36 36" fill="none" aria-hidden="true">
-          <rect width="36" height="36" rx="10" fill="url(#fGrad)"/>
-          <path d="M18 8a10 10 0 1 0 0 20A10 10 0 0 0 18 8zm0 3v7l5 3-1 1.7L16 19V11h2z" fill="white"/>
+          <rect width="36" height="36" rx="10" fill="url(#fGrad)" />
+          <path d="M18 8a10 10 0 1 0 0 20A10 10 0 0 0 18 8zm0 3v7l5 3-1 1.7L16 19V11h2z" fill="white" />
           <defs>
             <linearGradient id="fGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
-              <stop stop-color="#6C63FF"/><stop offset="1" stop-color="#3ECFCF"/>
+              <stop stop-color="#6C63FF" />
+              <stop offset="1" stop-color="#3ECFCF" />
             </linearGradient>
           </defs>
         </svg>
@@ -332,7 +382,8 @@
         &nbsp;&middot;&nbsp;
         Basado en el CST colombiano y la Ley 2101 de 2021
       </p>
-      <p class="footer-disclaimer">Esta herramienta es de carácter orientativo. Verifica los cálculos con un profesional de nómina.</p>
+      <p class="footer-disclaimer">Esta herramienta es de carácter orientativo. Verifica los cálculos con un profesional
+        de nómina.</p>
     </div>
   </footer>
 
@@ -347,4 +398,5 @@
   <script src="script.js"></script>
   <script>document.getElementById('footer-year').textContent = new Date().getFullYear();</script>
 </body>
+
 </html>
