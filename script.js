@@ -331,7 +331,7 @@ function inter(a, b, c, d) {
  * @param {number} schedFin    minutos desde medianoche (ej. 1020 = 17:00)
  * @param {number[]} workDays  días laborales (0=Dom…6=Sáb). El resto son días de descanso.
  */
-function calcularDesdeRegistros(registros, schedInicio = 480, schedFin = 1020, workDays = [1,2,3,4,5,6]) {
+function calcularDesdeRegistros(registros, schedInicio = 480, schedFin = 1020, workDays = [1,2,3,4,5]) {
   const D_I = 360;    // 06:00 AM
   const D_F = 1140;   // 07:00 PM
   const DIA = 1440;   // 24 × 60
@@ -411,7 +411,7 @@ function calcularDesdeRegistros(registros, schedInicio = 480, schedFin = 1020, w
  * El modelo lee tanto texto impreso como MANUSCRITO.
  * Devuelve {horas: HorasInput, nombre: string} — JS calcula las horas.
  */
-async function extractHoursWithGroq(pdfText, images, onProgress, schedInicio = 480, schedFin = 1020, workDays = [1,2,3,4,5,6]) {
+async function extractHoursWithGroq(pdfText, images, onProgress, schedInicio = 480, schedFin = 1020, workDays = [1,2,3,4,5]) {
   onProgress(55, 'Analizando PDF con visión IA…');
 
   const systemPrompt =
@@ -545,27 +545,20 @@ function parseHoursFromText(text) {
 
 /**
  * Lee los inputs de jornada y devuelve {schedInicio, schedFin, workDays}.
- * workDays: array de números de día (0=Dom, 1=Lun ... 6=Sáb) que son laborables.
+ * workDays está fijo como lunes a viernes [1,2,3,4,5].
+ * Sábado (6), domingo (0) y festivos se tratan como días de descanso.
  */
 function getScheduleMinutes() {
   const startVal = document.getElementById('schedule-start')?.value || '08:00';
   const endVal   = document.getElementById('schedule-end')?.value   || '17:00';
-  const daysVal  = document.getElementById('work-days-select')?.value || 'lun-sab';
 
   const [sh, sm] = startVal.split(':').map(Number);
   const [eh, em] = endVal.split(':').map(Number);
 
-  // 0=Dom 1=Lun 2=Mar 3=Mié 4=Jue 5=Vie 6=Sáb
-  const daysMap = {
-    'lun-vie': [1, 2, 3, 4, 5],
-    'lun-sab': [1, 2, 3, 4, 5, 6],
-    'lun-dom': [0, 1, 2, 3, 4, 5, 6],
-  };
-
   return {
     schedInicio: sh * 60 + sm,
     schedFin:    eh * 60 + em,
-    workDays:    daysMap[daysVal] || [1, 2, 3, 4, 5, 6],
+    workDays:    [1, 2, 3, 4, 5],  // Lunes a viernes (fijo)
   };
 }
 
