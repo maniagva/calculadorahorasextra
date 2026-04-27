@@ -508,39 +508,184 @@ Reglas:
  */
 function parseHoursFromText(text) {
   const t = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  const acc = { extraDiurna:0, extraNocturna:0, recargoNocturno:0,
-                dominicalDiurno:0, dominicalNocturno:0,
-                extraDominicalDiurno:0, extraDominicalNocturno:0 };
+  const acc = {
+    extraDiurna: 0, extraNocturna: 0, recargoNocturno: 0,
+    dominicalDiurno: 0, dominicalNocturno: 0,
+    extraDominicalDiurno: 0, extraDominicalNocturno: 0,
+  };
   let found = false;
 
+  const NUM = '([0-9]+(?:[.,][0-9]+)?)';
+
   const patterns = [
-    { re: /hora\s+extra\s+diurna[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,         key: 'extraDiurna' },
-    { re: /hora\s+extra\s+nocturna[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,       key: 'extraNocturna' },
-    { re: /recargo\s+nocturno[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,            key: 'recargoNocturno' },
-    { re: /dominical\s+diurno[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,            key: 'dominicalDiurno' },
-    { re: /dominical\s+nocturno[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,          key: 'dominicalNocturno' },
-    { re: /festivo\s+diurno[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,              key: 'dominicalDiurno' },
-    { re: /festivo\s+nocturno[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,            key: 'dominicalNocturno' },
-    { re: /extra\s+dominical\s+diurna?[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,   key: 'extraDominicalDiurno' },
-    { re: /extra\s+dominical\s+nocturna?[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g, key: 'extraDominicalNocturno' },
-    { re: /\bhed\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraDiurna' },
-    { re: /\bhen\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraNocturna' },
-    { re: /\brn\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'recargoNocturno' },
-    { re: /\bdd\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'dominicalDiurno' },
-    { re: /\bdn\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'dominicalNocturno' },
-    { re: /\bhedd\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraDominicalDiurno' },
-    { re: /\bhedn\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraDominicalNocturno' },
+    // ── Nombres completos ─────────────────────────────────────────
+    { re: new RegExp(`hora\\s+extra\\s+diurna[^0-9\\n]*${NUM}`, 'g'),          key: 'extraDiurna' },
+    { re: new RegExp(`hora\\s+extra\\s+nocturna[^0-9\\n]*${NUM}`, 'g'),        key: 'extraNocturna' },
+    { re: new RegExp(`recargo\\s+nocturno[^0-9\\n]*${NUM}`, 'g'),              key: 'recargoNocturno' },
+    { re: new RegExp(`dominical\\s+diurno[^0-9\\n]*${NUM}`, 'g'),              key: 'dominicalDiurno' },
+    { re: new RegExp(`dominical\\s+nocturno[^0-9\\n]*${NUM}`, 'g'),            key: 'dominicalNocturno' },
+    { re: new RegExp(`festivo\\s+diurno[^0-9\\n]*${NUM}`, 'g'),                key: 'dominicalDiurno' },
+    { re: new RegExp(`festivo\\s+nocturno[^0-9\\n]*${NUM}`, 'g'),              key: 'dominicalNocturno' },
+    { re: new RegExp(`extra\\s+dominical\\s+diurna?[^0-9\\n]*${NUM}`, 'g'),    key: 'extraDominicalDiurno' },
+    { re: new RegExp(`extra\\s+dominical\\s+nocturna?[^0-9\\n]*${NUM}`, 'g'),  key: 'extraDominicalNocturno' },
+    // variante: "hora dominical diurna / nocturna"
+    { re: new RegExp(`hora\\s+dominical\\s+diurna?[^0-9\\n]*${NUM}`, 'g'),     key: 'dominicalDiurno' },
+    { re: new RegExp(`hora\\s+dominical\\s+nocturna?[^0-9\\n]*${NUM}`, 'g'),   key: 'dominicalNocturno' },
+    // variante: "trabajo dominical / festivo"
+    { re: new RegExp(`trabajo\\s+(?:dominical|festivo)[^0-9\\n]*${NUM}`, 'g'), key: 'dominicalDiurno' },
+    // variante: "hora de descanso"
+    { re: new RegExp(`descanso\\s+dominical[^0-9\\n]*${NUM}`, 'g'),            key: 'dominicalDiurno' },
+
+    // ── Abreviaturas estándar CST (con/sin espacio antes del número) ──
+    { re: /\bhed\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'extraDiurna' },
+    { re: /\bhen\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'extraNocturna' },
+    { re: /\brn\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,    key: 'recargoNocturno' },
+    { re: /\bdd\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,    key: 'dominicalDiurno' },
+    { re: /\bdn\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,    key: 'dominicalNocturno' },
+    { re: /\bhedd\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraDominicalDiurno' },
+    { re: /\bhedn\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraDominicalNocturno' },
+
+    // ── Abreviaturas pegadas al número: HED2.5, HEN1,5 ───────────────
+    { re: /\bhed([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraDiurna' },
+    { re: /\bhen([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraNocturna' },
+    { re: /\brn([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'recargoNocturno' },
+    { re: /\bhedd([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraDominicalDiurno' },
+    { re: /\bhedn([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraDominicalNocturno' },
+
+    // ── Patrones de tabla (número | etiqueta) ─────────────────────────
+    // e.g. "2.5  hora extra diurna" o "1,0  HED"
+    { re: new RegExp(`${NUM}\\s+(?:hora\\s+)?extra\\s+diurna`, 'g'),           key: 'extraDiurna' },
+    { re: new RegExp(`${NUM}\\s+(?:hora\\s+)?extra\\s+nocturna`, 'g'),         key: 'extraNocturna' },
+    { re: new RegExp(`${NUM}\\s+recargo\\s+nocturno`, 'g'),                    key: 'recargoNocturno' },
+    { re: new RegExp(`${NUM}\\s+(?:hora\\s+)?dominical\\s+diurna?`, 'g'),      key: 'dominicalDiurno' },
+    { re: new RegExp(`${NUM}\\s+(?:hora\\s+)?dominical\\s+nocturna?`, 'g'),    key: 'dominicalNocturno' },
+    { re: new RegExp(`${NUM}\\s+(?:hora\\s+)?extra\\s+dominical\\s+diurna?`, 'g'),   key: 'extraDominicalDiurno' },
+    { re: new RegExp(`${NUM}\\s+(?:hora\\s+)?extra\\s+dominical\\s+nocturna?`, 'g'), key: 'extraDominicalNocturno' },
+    { re: new RegExp(`${NUM}\\s+hed\\b`, 'gi'),  key: 'extraDiurna' },
+    { re: new RegExp(`${NUM}\\s+hen\\b`, 'gi'),  key: 'extraNocturna' },
+    { re: new RegExp(`${NUM}\\s+hedd\\b`, 'gi'), key: 'extraDominicalDiurno' },
+    { re: new RegExp(`${NUM}\\s+hedn\\b`, 'gi'), key: 'extraDominicalNocturno' },
+    { re: new RegExp(`${NUM}\\s+rn\\b`, 'gi'),   key: 'recargoNocturno' },
+    { re: new RegExp(`${NUM}\\s+dd\\b`, 'gi'),   key: 'dominicalDiurno' },
+    { re: new RegExp(`${NUM}\\s+dn\\b`, 'gi'),   key: 'dominicalNocturno' },
+
+    // ── Variantes coloquiales / de liquidación ────────────────────────
+    { re: new RegExp(`horas?\\s+extras?\\s+diurnas?[^0-9\\n]*${NUM}`, 'g'),    key: 'extraDiurna' },
+    { re: new RegExp(`horas?\\s+extras?\\s+nocturnas?[^0-9\\n]*${NUM}`, 'g'),  key: 'extraNocturna' },
+    { re: new RegExp(`extras?\\s+diurnas?[^0-9\\n]*${NUM}`, 'g'),              key: 'extraDiurna' },
+    { re: new RegExp(`extras?\\s+nocturnas?[^0-9\\n]*${NUM}`, 'g'),            key: 'extraNocturna' },
+    { re: new RegExp(`nocturno\\s+ordinario[^0-9\\n]*${NUM}`, 'g'),            key: 'recargoNocturno' },
   ];
 
   patterns.forEach(({ re, key }) => {
     let match;
+    re.lastIndex = 0;
     while ((match = re.exec(t)) !== null) {
-      const val = parseFloat(match[1].replace(',', '.'));
-      if (!isNaN(val)) { acc[key] += val; found = true; }
+      const raw = match[1] || match[0].match(/[0-9]+(?:[.,][0-9]+)?/)?.[0];
+      const val = parseFloat((raw || '').replace(',', '.'));
+      if (!isNaN(val) && val > 0 && val < 300) { // sanity cap: <300 h
+        acc[key] += val;
+        found = true;
+      }
     }
   });
 
+  // Redondear acumuladores
+  Object.keys(acc).forEach(k => { acc[k] = Math.round(acc[k] * 100) / 100; });
   return found ? acc : null;
+}
+
+/* ══════════════════════════════════════════════════════
+   FALLBACK PANEL – guía al usuario al modo manual
+   ══════════════════════════════════════════════════════ */
+
+/**
+ * Muestra el panel de guía con un mensaje contextual cuando la IA no
+ * puede procesar el archivo. Los "tips" son sugerencias específicas.
+ *
+ * @param {'ai_zero'|'ai_error'|'ai_scanned'|'regex_only'|'total_fail'} reason
+ * @param {string} [errorMsg]  mensaje de error técnico (opcional)
+ */
+function showManualFallbackPanel(reason, errorMsg = '') {
+  const panel  = document.getElementById('fallback-panel');
+  const title  = document.getElementById('fallback-title');
+  const detail = document.getElementById('fallback-detail');
+  const tipsList = document.getElementById('fallback-tips');
+  const ctaBtn = document.getElementById('fallback-cta-btn');
+  if (!panel) return;
+
+  const configs = {
+    ai_zero: {
+      t: 'La IA no encontró registros de horas',
+      d: 'El modelo analizó el PDF pero no detectó ninguna fila con hora de ingreso y hora de salida.',
+      tips: [
+        'Verifica que el PDF contenga una tabla con columnas de "HORA INGRESO" y "HORA SALIDA".',
+        'Si el documento tiene el texto incrustado en una imagen, la IA aplica OCR — asegúrate de que la imagen esté nítida.',
+        'Puedes ingresar las horas manualmente en el formulario de abajo.',
+      ],
+    },
+    ai_error: {
+      t: 'Error al conectar con la IA',
+      d: errorMsg
+        ? `Groq respondió con un error: "${errorMsg}"`
+        : 'No se pudo conectar con el servicio de inteligencia artificial.',
+      tips: [
+        'Comprueba tu conexión a internet.',
+        'Es posible que el servicio de Groq esté temporalmente no disponible (límite de peticiones).',
+        'Puedes continuar ingresando las horas manualmente mientras se restablece el servicio.',
+      ],
+    },
+    ai_scanned: {
+      t: 'PDF escaneado o sin texto seleccionable',
+      d: 'El PDF no contiene texto digital; la IA intentó leer las imágenes con OCR.',
+      tips: [
+        'Si el OCR falló, el documento puede estar muy borroso o en baja resolución.',
+        'Intenta subir una versión del PDF con mejor calidad, o un PDF generado digitalmente (no escaneado).',
+        'Si no tienes otra versión, ingresa los datos manualmente.',
+      ],
+    },
+    regex_only: {
+      t: 'Datos parciales detectados con detección clásica',
+      d: 'La IA no pudo procesar el archivo. Se usó detección por patrones de texto como respaldo, pero los resultados pueden ser incompletos.',
+      tips: [
+        'Revisa los campos autocompletados y corrige cualquier valor incorrecto.',
+        'Los campos en blanco pueden ser porque el PDF usa un formato no estándar.',
+      ],
+    },
+    total_fail: {
+      t: 'No se pudo extraer ningún dato del PDF',
+      d: 'Ni la IA ni la detección clásica pudieron interpretar el contenido del archivo.',
+      tips: [
+        'El PDF puede estar protegido con contraseña, dañado o en un formato no compatible.',
+        'Verifica que el archivo sea un PDF válido con información de horas laborales.',
+        'Ingresa todas las horas manualmente usando el formulario de abajo.',
+      ],
+    },
+  };
+
+  const cfg = configs[reason] || configs.total_fail;
+  title.textContent  = cfg.t;
+  detail.textContent = cfg.d;
+
+  tipsList.innerHTML = cfg.tips
+    .map(tip => `<li>${tip}</li>`)
+    .join('');
+
+  panel.classList.remove('hidden');
+
+  // CTA → scroll + highlight al card de ajuste manual
+  ctaBtn.onclick = () => {
+    const manualCard = document.getElementById('card-manual');
+    if (!manualCard) return;
+    manualCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    manualCard.classList.add('card--highlight');
+    setTimeout(() => manualCard.classList.remove('card--highlight'), 2000);
+  };
+}
+
+/** Oculta el panel de fallback (al subir un nuevo archivo). */
+function hideFallbackPanel() {
+  document.getElementById('fallback-panel')?.classList.add('hidden');
 }
 
 /**
@@ -649,6 +794,9 @@ function initUploadZone() {
       return;
     }
 
+    // Ocultar panel de error anterior al procesar un nuevo archivo
+    hideFallbackPanel();
+
     fileName.textContent = file.name;
     fileSize.textContent = formatBytes(file.size);
     fileInfo.classList.remove('hidden');
@@ -665,17 +813,19 @@ function initUploadZone() {
       console.log('Primeros 1000 caracteres:\n', text.slice(0, 1000));
       console.groupEnd();
 
+      const isScanned = text.trim().length < 80; // muy poco texto → probablemente escaneado
+
       // 2. Renderizar páginas a imágenes para OCR de manuscrito
       setProgress(26, 'Preparando imágenes para OCR…');
       const images = await renderPDFToImages(pdf, (pct, msg) => setProgress(pct, msg));
       console.log(`🖼️ ${images.length} página(s) renderizadas para visión IA`);
 
-      // 3. Groq visión extrae nombre + registros (texto impreso + manuscrito) → JS calcula
+      // 3. Groq visión extrae nombre + registros → JS calcula
       let horas   = null;
       let nombre  = '';
       let usedAI  = false;
+      let groqErrorMsg = '';
 
-      // Leer jornada habitual del formulario
       const { schedInicio, schedFin, workDays } = getScheduleMinutes();
       const hStr = m => `${Math.floor(m/60).toString().padStart(2,'0')}:${(m%60).toString().padStart(2,'0')}`;
       const dayNames = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
@@ -692,11 +842,11 @@ function initUploadZone() {
           horas  = groqHoras;
           usedAI = true;
         } else {
-          console.warn('Groq visión respondió con 0 horas. Usando regex como fallback.');
+          console.warn('Groq visión respondió con 0 horas.');
         }
       } catch (groqErr) {
+        groqErrorMsg = groqErr.message;
         console.error('❌ Groq error:', groqErr.message);
-        showToast(`⚠️ Groq: ${groqErr.message}. Usando detección clásica…`, 'info');
       }
 
       // 4. Fallback: regex sobre el texto digital
@@ -710,21 +860,38 @@ function initUploadZone() {
 
       if (horas) {
         fillHoursInputs(horas);
-        // Guardar el nombre en un data attribute del botón de calcular
-        // para que renderResults y el export lo tengan disponible
         document.getElementById('calculate-btn').dataset.nombre = nombre;
-        const method = usedAI ? '✨ IA Groq (visión + OCR)' : '🔍 Detección automática';
-        const nombreMsg = nombre ? ` · ${nombre}` : '';
-        showToast(`${method}${nombreMsg}: horas autocompletadas correctamente.`, 'success');
+
+        if (usedAI) {
+          const nombreMsg = nombre ? ` · ${nombre}` : '';
+          showToast(`✨ IA Groq (visión + OCR)${nombreMsg}: horas autocompletadas.`, 'success');
+        } else {
+          // Regex tuvo éxito pero IA falló → panel informativo + éxito parcial
+          showToast('🔍 Datos parciales detectados. Revisa los valores.', 'info');
+          if (groqErrorMsg) {
+            showManualFallbackPanel('ai_error', groqErrorMsg);
+          } else {
+            showManualFallbackPanel('regex_only');
+          }
+        }
       } else {
-        showToast('No se detectaron horas. Completa el formulario manual.', 'info');
+        // Ningún método encontró horas
+        if (groqErrorMsg) {
+          showManualFallbackPanel('ai_error', groqErrorMsg);
+        } else if (isScanned) {
+          showManualFallbackPanel('ai_scanned');
+        } else {
+          showManualFallbackPanel('total_fail');
+        }
+        showToast('No se detectaron horas. Consulta las sugerencias en el panel.', 'info');
       }
 
       setTimeout(() => parseStatus.classList.add('hidden'), 1500);
     } catch (err) {
       console.error('💥 Error procesando PDF:', err);
       setProgress(0, 'Error al leer el PDF.');
-      showToast(`Error: ${err.message || 'No se pudo leer el PDF.'}`, 'error');
+      showManualFallbackPanel('ai_error', err.message || 'Error inesperado al leer el archivo.');
+      showToast(`Error al leer el PDF. Consulta las sugerencias.`, 'error');
       setTimeout(() => parseStatus.classList.add('hidden'), 3000);
     }
   }
