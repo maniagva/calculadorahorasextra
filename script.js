@@ -290,110 +290,13 @@ async function renderPDFToImages(pdf, onProgress, maxPages = 4) {
   return images;
 }
 
-/* ══════════════════════════════════════════════════════
-   FESTIVOS COLOMBIA – carga dinámica vía date.nager.at
-   ══════════════════════════════════════════════════════ */
-
-/**
- * Set de respaldo con los festivos 2026 (se usa si la API no responde).
- * Formato interno: 'DD/MM/YYYY'
- */
-const FESTIVOS_FALLBACK_2026 = new Set([
+/* ── Festivos Colombia 2026 ──────────────────────────── */
+const FESTIVOS_CO = new Set([
   '01/01/2026','12/01/2026','23/03/2026','02/04/2026','03/04/2026',
   '01/05/2026','18/05/2026','08/06/2026','15/06/2026','29/06/2026',
   '20/07/2026','07/08/2026','17/08/2026','12/10/2026','02/11/2026',
   '16/11/2026','08/12/2026','25/12/2026',
 ]);
-
-/** Caché en memoria: { 2026: Set{'DD/MM/YYYY', ...}, 2025: Set{...} } */
-const _festivosCache = {};
-
-/**
- * Convierte 'YYYY-MM-DD' (formato Nager) a 'DD/MM/YYYY' (formato interno).
- */
-function isoToDDMMYYYY(iso) {
-  const [y, m, d] = iso.split('-');
-  return `${d}/${m}/${y}`;
-}
-
-/**
- * Obtiene el Set de festivos colombianos para un año dado.
- * Orden de prioridad:
- *  1. Cache en memoria (misma sesión)
- *  2. localStorage (TTL 30 días)
- *  3. API date.nager.at
- *  4. Fallback hardcoded (solo año 2026)
- *
- * @param {number} year
- * @returns {Promise<Set<string>>}  Set de 'DD/MM/YYYY'
- */
-async function fetchFestivos(year) {
-  // 1. Memoria
-  if (_festivosCache[year]) return _festivosCache[year];
-
-  // 2. localStorage
-  const cacheKey = `festivos_co_${year}`;
-  try {
-    const stored = localStorage.getItem(cacheKey);
-    if (stored) {
-      const { ts, data } = JSON.parse(stored);
-      const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
-      if (Date.now() - ts < THIRTY_DAYS) {
-        const s = new Set(data);
-        _festivosCache[year] = s;
-        console.log(`📅 Festivos ${year} desde cache local (${s.size} días).`);
-        return s;
-      }
-    }
-  } catch (_) { /* localStorage no disponible */ }
-
-  // 3. API
-  try {
-    const res = await fetch(
-      `https://date.nager.at/api/v3/PublicHolidays/${year}/CO`,
-      { signal: AbortSignal.timeout(5000) }  // timeout 5 s
-    );
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = await res.json();
-    const dates = json.map(h => isoToDDMMYYYY(h.date));
-    const s = new Set(dates);
-    _festivosCache[year] = s;
-
-    // Guardar en localStorage
-    try {
-      localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: dates }));
-    } catch (_) {}
-
-    console.log(`📅 Festivos ${year} descargados de Nager.at (${s.size} días).`);
-    return s;
-  } catch (err) {
-    console.warn(`⚠️ No se pudieron cargar festivos ${year} desde la API: ${err.message}. Usando respaldo.`);
-  }
-
-  // 4. Fallback
-  const fallback = year === 2026 ? FESTIVOS_FALLBACK_2026 : new Set();
-  _festivosCache[year] = fallback;
-  return fallback;
-}
-
-/**
- * Pre-carga los festivos de todos los años presentes en los registros.
- * Retorna un Map { year → Set<'DD/MM/YYYY'> } para consulta O(1).
- *
- * @param {Array} registros  [{fecha:'DD/MM/YYYY', ...}]
- * @returns {Promise<Map<number,Set<string>>>}
- */
-async function precargarFestivos(registros) {
-  const years = [...new Set(registros.map(r => {
-    const parts = r.fecha.split('/');
-    return parseInt(parts[2], 10);
-  }).filter(y => !isNaN(y)))];
-
-  const entries = await Promise.all(
-    years.map(async y => [y, await fetchFestivos(y)])
-  );
-  return new Map(entries);
-}
 
 /**
  * Convierte "HH:MM" a minutos desde medianoche.
@@ -428,9 +331,7 @@ function inter(a, b, c, d) {
  * @param {number} schedFin    minutos desde medianoche (ej. 1020 = 17:00)
  * @param {number[]} workDays  días laborales (0=Dom…6=Sáb). El resto son días de descanso.
  */
-async function calcularDesdeRegistros(registros, schedInicio = 480, schedFin = 1020, workDays = [1,2,3,4,5]) {
-  // Pre-cargar festivos de cada año presente en los registros (API + cache)
-  const festivosPorAnio = await precargarFestivos(registros);
+function calcularDesdeRegistros(registros, schedInicio = 480, schedFin = 1020, workDays = [1,2,3,4,5]) {
   const D_I = 360;    // 06:00 AM
   const D_F = 1140;   // 07:00 PM
   const DIA = 1440;   // 24 × 60
@@ -444,8 +345,7 @@ async function calcularDesdeRegistros(registros, schedInicio = 480, schedFin = 1
   registros.forEach(reg => {
     const [dd, mm, yyyy] = reg.fecha.split('/').map(Number);
     const fecha   = new Date(yyyy, mm - 1, dd);
-    const festivosAnio = festivosPorAnio.get(yyyy) || new Set();
-    const esDesc = festivosAnio.has(reg.fecha) || !workDays.includes(fecha.getDay());
+    const esDesc = FESTIVOS_CO.has(reg.fecha) || !workDays.includes(fecha.getDay());
 
     let ini = toMin(reg.ingreso);
     let fin = toMin(reg.salida);
@@ -598,7 +498,7 @@ Reglas:
   if (!Array.isArray(registros) || registros.length === 0) return { horas: null, nombre };
 
   // Pasar el horario laboral y los días de descanso para clasificar correctamente
-  return { horas: await calcularDesdeRegistros(registros, schedInicio, schedFin, workDays), nombre };
+  return { horas: calcularDesdeRegistros(registros, schedInicio, schedFin, workDays), nombre };
 }
 
 /**
@@ -608,232 +508,39 @@ Reglas:
  */
 function parseHoursFromText(text) {
   const t = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  const acc = {
-    extraDiurna: 0, extraNocturna: 0, recargoNocturno: 0,
-    dominicalDiurno: 0, dominicalNocturno: 0,
-    extraDominicalDiurno: 0, extraDominicalNocturno: 0,
-  };
+  const acc = { extraDiurna:0, extraNocturna:0, recargoNocturno:0,
+                dominicalDiurno:0, dominicalNocturno:0,
+                extraDominicalDiurno:0, extraDominicalNocturno:0 };
   let found = false;
 
-  const NUM = '([0-9]+(?:[.,][0-9]+)?)';
-
   const patterns = [
-    // ── Nombres completos ─────────────────────────────────────────
-    { re: new RegExp(`hora\\s+extra\\s+diurna[^0-9\\n]*${NUM}`, 'g'),          key: 'extraDiurna' },
-    { re: new RegExp(`hora\\s+extra\\s+nocturna[^0-9\\n]*${NUM}`, 'g'),        key: 'extraNocturna' },
-    { re: new RegExp(`recargo\\s+nocturno[^0-9\\n]*${NUM}`, 'g'),              key: 'recargoNocturno' },
-    { re: new RegExp(`dominical\\s+diurno[^0-9\\n]*${NUM}`, 'g'),              key: 'dominicalDiurno' },
-    { re: new RegExp(`dominical\\s+nocturno[^0-9\\n]*${NUM}`, 'g'),            key: 'dominicalNocturno' },
-    { re: new RegExp(`festivo\\s+diurno[^0-9\\n]*${NUM}`, 'g'),                key: 'dominicalDiurno' },
-    { re: new RegExp(`festivo\\s+nocturno[^0-9\\n]*${NUM}`, 'g'),              key: 'dominicalNocturno' },
-    { re: new RegExp(`extra\\s+dominical\\s+diurna?[^0-9\\n]*${NUM}`, 'g'),    key: 'extraDominicalDiurno' },
-    { re: new RegExp(`extra\\s+dominical\\s+nocturna?[^0-9\\n]*${NUM}`, 'g'),  key: 'extraDominicalNocturno' },
-    // variante: "hora dominical diurna / nocturna"
-    { re: new RegExp(`hora\\s+dominical\\s+diurna?[^0-9\\n]*${NUM}`, 'g'),     key: 'dominicalDiurno' },
-    { re: new RegExp(`hora\\s+dominical\\s+nocturna?[^0-9\\n]*${NUM}`, 'g'),   key: 'dominicalNocturno' },
-    // variante: "trabajo dominical / festivo"
-    { re: new RegExp(`trabajo\\s+(?:dominical|festivo)[^0-9\\n]*${NUM}`, 'g'), key: 'dominicalDiurno' },
-    // variante: "hora de descanso"
-    { re: new RegExp(`descanso\\s+dominical[^0-9\\n]*${NUM}`, 'g'),            key: 'dominicalDiurno' },
-
-    // ── Abreviaturas estándar CST (con/sin espacio antes del número) ──
-    { re: /\bhed\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'extraDiurna' },
-    { re: /\bhen\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'extraNocturna' },
-    { re: /\brn\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,    key: 'recargoNocturno' },
-    { re: /\bdd\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,    key: 'dominicalDiurno' },
-    { re: /\bdn\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,    key: 'dominicalNocturno' },
-    { re: /\bhedd\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraDominicalDiurno' },
-    { re: /\bhedn\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraDominicalNocturno' },
-
-    // ── Abreviaturas pegadas al número: HED2.5, HEN1,5 ───────────────
-    { re: /\bhed([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraDiurna' },
-    { re: /\bhen([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraNocturna' },
-    { re: /\brn([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'recargoNocturno' },
-    { re: /\bhedd([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraDominicalDiurno' },
-    { re: /\bhedn([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraDominicalNocturno' },
-
-    // ── Patrones de tabla (número | etiqueta) ─────────────────────────
-    // e.g. "2.5  hora extra diurna" o "1,0  HED"
-    { re: new RegExp(`${NUM}\\s+(?:hora\\s+)?extra\\s+diurna`, 'g'),           key: 'extraDiurna' },
-    { re: new RegExp(`${NUM}\\s+(?:hora\\s+)?extra\\s+nocturna`, 'g'),         key: 'extraNocturna' },
-    { re: new RegExp(`${NUM}\\s+recargo\\s+nocturno`, 'g'),                    key: 'recargoNocturno' },
-    { re: new RegExp(`${NUM}\\s+(?:hora\\s+)?dominical\\s+diurna?`, 'g'),      key: 'dominicalDiurno' },
-    { re: new RegExp(`${NUM}\\s+(?:hora\\s+)?dominical\\s+nocturna?`, 'g'),    key: 'dominicalNocturno' },
-    { re: new RegExp(`${NUM}\\s+(?:hora\\s+)?extra\\s+dominical\\s+diurna?`, 'g'),   key: 'extraDominicalDiurno' },
-    { re: new RegExp(`${NUM}\\s+(?:hora\\s+)?extra\\s+dominical\\s+nocturna?`, 'g'), key: 'extraDominicalNocturno' },
-    { re: new RegExp(`${NUM}\\s+hed\\b`, 'gi'),  key: 'extraDiurna' },
-    { re: new RegExp(`${NUM}\\s+hen\\b`, 'gi'),  key: 'extraNocturna' },
-    { re: new RegExp(`${NUM}\\s+hedd\\b`, 'gi'), key: 'extraDominicalDiurno' },
-    { re: new RegExp(`${NUM}\\s+hedn\\b`, 'gi'), key: 'extraDominicalNocturno' },
-    { re: new RegExp(`${NUM}\\s+rn\\b`, 'gi'),   key: 'recargoNocturno' },
-    { re: new RegExp(`${NUM}\\s+dd\\b`, 'gi'),   key: 'dominicalDiurno' },
-    { re: new RegExp(`${NUM}\\s+dn\\b`, 'gi'),   key: 'dominicalNocturno' },
-
-    // ── Variantes coloquiales / de liquidación ────────────────────────
-    { re: new RegExp(`horas?\\s+extras?\\s+diurnas?[^0-9\\n]*${NUM}`, 'g'),    key: 'extraDiurna' },
-    { re: new RegExp(`horas?\\s+extras?\\s+nocturnas?[^0-9\\n]*${NUM}`, 'g'),  key: 'extraNocturna' },
-    { re: new RegExp(`extras?\\s+diurnas?[^0-9\\n]*${NUM}`, 'g'),              key: 'extraDiurna' },
-    { re: new RegExp(`extras?\\s+nocturnas?[^0-9\\n]*${NUM}`, 'g'),            key: 'extraNocturna' },
-    { re: new RegExp(`nocturno\\s+ordinario[^0-9\\n]*${NUM}`, 'g'),            key: 'recargoNocturno' },
+    { re: /hora\s+extra\s+diurna[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,         key: 'extraDiurna' },
+    { re: /hora\s+extra\s+nocturna[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,       key: 'extraNocturna' },
+    { re: /recargo\s+nocturno[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,            key: 'recargoNocturno' },
+    { re: /dominical\s+diurno[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,            key: 'dominicalDiurno' },
+    { re: /dominical\s+nocturno[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,          key: 'dominicalNocturno' },
+    { re: /festivo\s+diurno[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,              key: 'dominicalDiurno' },
+    { re: /festivo\s+nocturno[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,            key: 'dominicalNocturno' },
+    { re: /extra\s+dominical\s+diurna?[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,   key: 'extraDominicalDiurno' },
+    { re: /extra\s+dominical\s+nocturna?[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g, key: 'extraDominicalNocturno' },
+    { re: /\bhed\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraDiurna' },
+    { re: /\bhen\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraNocturna' },
+    { re: /\brn\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'recargoNocturno' },
+    { re: /\bdd\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'dominicalDiurno' },
+    { re: /\bdn\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'dominicalNocturno' },
+    { re: /\bhedd\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraDominicalDiurno' },
+    { re: /\bhedn\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraDominicalNocturno' },
   ];
 
   patterns.forEach(({ re, key }) => {
     let match;
-    re.lastIndex = 0;
     while ((match = re.exec(t)) !== null) {
-      const raw = match[1] || match[0].match(/[0-9]+(?:[.,][0-9]+)?/)?.[0];
-      const val = parseFloat((raw || '').replace(',', '.'));
-      if (!isNaN(val) && val > 0 && val < 300) { // sanity cap: <300 h
-        acc[key] += val;
-        found = true;
-      }
+      const val = parseFloat(match[1].replace(',', '.'));
+      if (!isNaN(val)) { acc[key] += val; found = true; }
     }
   });
 
-  // Redondear acumuladores
-  Object.keys(acc).forEach(k => { acc[k] = Math.round(acc[k] * 100) / 100; });
   return found ? acc : null;
-}
-
-/* ══════════════════════════════════════════════════════
-   VALIDACIÓN DEL HORARIO LABORAL
-   ══════════════════════════════════════════════════════ */
-
-/**
- * Valida que los inputs de horario habitual sean coherentes antes de
- * procesar el PDF o calcular las horas.
- *
- * Reglas:
- *  - Ambos campos deben estar completos
- *  - schedInicio < schedFin  (no se soportan turnos que crucen medianoche)
- *  - La diferencia mínima es 1 hora (evita jornadas de 0 min)
- *  - schedFin no puede exceder las 23:59
- *
- * @returns {{ ok: boolean, msg: string }}
- */
-function validateSchedule() {
-  const startEl = document.getElementById('schedule-start');
-  const endEl   = document.getElementById('schedule-end');
-
-  // Limpiar estado de error previo
-  [startEl, endEl].forEach(el => el?.classList.remove('input--error'));
-
-  const { schedInicio, schedFin } = getScheduleMinutes();
-
-  if (!startEl?.value || !endEl?.value) {
-    startEl?.classList.add('input--error');
-    endEl?.classList.add('input--error');
-    return { ok: false, msg: 'Completa los campos de inicio y fin de jornada habitual.' };
-  }
-
-  if (schedInicio >= schedFin) {
-    startEl?.classList.add('input--error');
-    endEl?.classList.add('input--error');
-    return {
-      ok: false,
-      msg: `La hora de inicio (${startEl.value}) debe ser anterior a la hora de fin (${endEl.value}) de la jornada.`,
-    };
-  }
-
-  if (schedFin - schedInicio < 60) {
-    endEl?.classList.add('input--error');
-    return { ok: false, msg: 'La jornada habitual debe tener al menos 1 hora de duración.' };
-  }
-
-  return { ok: true, msg: '' };
-}
-
-/* ══════════════════════════════════════════════════════
-   FALLBACK PANEL – guía al usuario al modo manual
-   ══════════════════════════════════════════════════════ */
-
-/**
- * Muestra el panel de guía con un mensaje contextual cuando la IA no
- * puede procesar el archivo. Los "tips" son sugerencias específicas.
- *
- * @param {'ai_zero'|'ai_error'|'ai_scanned'|'regex_only'|'total_fail'} reason
- * @param {string} [errorMsg]  mensaje de error técnico (opcional)
- */
-function showManualFallbackPanel(reason, errorMsg = '') {
-  const panel  = document.getElementById('fallback-panel');
-  const title  = document.getElementById('fallback-title');
-  const detail = document.getElementById('fallback-detail');
-  const tipsList = document.getElementById('fallback-tips');
-  const ctaBtn = document.getElementById('fallback-cta-btn');
-  if (!panel) return;
-
-  const configs = {
-    ai_zero: {
-      t: 'La IA no encontró registros de horas',
-      d: 'El modelo analizó el PDF pero no detectó ninguna fila con hora de ingreso y hora de salida.',
-      tips: [
-        'Verifica que el PDF contenga una tabla con columnas de "HORA INGRESO" y "HORA SALIDA".',
-        'Si el documento tiene el texto incrustado en una imagen, la IA aplica OCR — asegúrate de que la imagen esté nítida.',
-        'Puedes ingresar las horas manualmente en el formulario de abajo.',
-      ],
-    },
-    ai_error: {
-      t: 'Error al conectar con la IA',
-      d: errorMsg
-        ? `Groq respondió con un error: "${errorMsg}"`
-        : 'No se pudo conectar con el servicio de inteligencia artificial.',
-      tips: [
-        'Comprueba tu conexión a internet.',
-        'Es posible que el servicio de Groq esté temporalmente no disponible (límite de peticiones).',
-        'Puedes continuar ingresando las horas manualmente mientras se restablece el servicio.',
-      ],
-    },
-    ai_scanned: {
-      t: 'PDF escaneado o sin texto seleccionable',
-      d: 'El PDF no contiene texto digital; la IA intentó leer las imágenes con OCR.',
-      tips: [
-        'Si el OCR falló, el documento puede estar muy borroso o en baja resolución.',
-        'Intenta subir una versión del PDF con mejor calidad, o un PDF generado digitalmente (no escaneado).',
-        'Si no tienes otra versión, ingresa los datos manualmente.',
-      ],
-    },
-    regex_only: {
-      t: 'Datos parciales detectados con detección clásica',
-      d: 'La IA no pudo procesar el archivo. Se usó detección por patrones de texto como respaldo, pero los resultados pueden ser incompletos.',
-      tips: [
-        'Revisa los campos autocompletados y corrige cualquier valor incorrecto.',
-        'Los campos en blanco pueden ser porque el PDF usa un formato no estándar.',
-      ],
-    },
-    total_fail: {
-      t: 'No se pudo extraer ningún dato del PDF',
-      d: 'Ni la IA ni la detección clásica pudieron interpretar el contenido del archivo.',
-      tips: [
-        'El PDF puede estar protegido con contraseña, dañado o en un formato no compatible.',
-        'Verifica que el archivo sea un PDF válido con información de horas laborales.',
-        'Ingresa todas las horas manualmente usando el formulario de abajo.',
-      ],
-    },
-  };
-
-  const cfg = configs[reason] || configs.total_fail;
-  title.textContent  = cfg.t;
-  detail.textContent = cfg.d;
-
-  tipsList.innerHTML = cfg.tips
-    .map(tip => `<li>${tip}</li>`)
-    .join('');
-
-  panel.classList.remove('hidden');
-
-  // CTA → scroll + highlight al card de ajuste manual
-  ctaBtn.onclick = () => {
-    const manualCard = document.getElementById('card-manual');
-    if (!manualCard) return;
-    manualCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    manualCard.classList.add('card--highlight');
-    setTimeout(() => manualCard.classList.remove('card--highlight'), 2000);
-  };
-}
-
-/** Oculta el panel de fallback (al subir un nuevo archivo). */
-function hideFallbackPanel() {
-  document.getElementById('fallback-panel')?.classList.add('hidden');
 }
 
 /**
@@ -942,38 +649,6 @@ function initUploadZone() {
       return;
     }
 
-    // Validación de magic bytes: los primeros 5 bytes deben ser %PDF-
-    const isRealPDF = await new Promise(resolve => {
-      const reader = new FileReader();
-      reader.onload = e => {
-        const header = new Uint8Array(e.target.result);
-        // %PDF- = 0x25 0x50 0x44 0x46 0x2D
-        resolve(
-          header[0] === 0x25 && header[1] === 0x50 &&
-          header[2] === 0x44 && header[3] === 0x46 && header[4] === 0x2D
-        );
-      };
-      reader.onerror = () => resolve(false);
-      reader.readAsArrayBuffer(file.slice(0, 5));
-    });
-
-    if (!isRealPDF) {
-      showToast('El archivo no es un PDF válido (firma incorrecta).', 'error');
-      return;
-    }
-
-    // Validar horario antes de procesar
-    const schedVal = validateSchedule();
-    if (!schedVal.ok) {
-      showToast(`⏰ ${schedVal.msg}`, 'error');
-      // Scroll al card de configuración para que el usuario vea los inputs marcados
-      document.getElementById('card-salary')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      return;
-    }
-
-    // Ocultar panel de error anterior al procesar un nuevo archivo
-    hideFallbackPanel();
-
     fileName.textContent = file.name;
     fileSize.textContent = formatBytes(file.size);
     fileInfo.classList.remove('hidden');
@@ -990,19 +665,17 @@ function initUploadZone() {
       console.log('Primeros 1000 caracteres:\n', text.slice(0, 1000));
       console.groupEnd();
 
-      const isScanned = text.trim().length < 80; // muy poco texto → probablemente escaneado
-
       // 2. Renderizar páginas a imágenes para OCR de manuscrito
       setProgress(26, 'Preparando imágenes para OCR…');
       const images = await renderPDFToImages(pdf, (pct, msg) => setProgress(pct, msg));
       console.log(`🖼️ ${images.length} página(s) renderizadas para visión IA`);
 
-      // 3. Groq visión extrae nombre + registros → JS calcula
+      // 3. Groq visión extrae nombre + registros (texto impreso + manuscrito) → JS calcula
       let horas   = null;
       let nombre  = '';
       let usedAI  = false;
-      let groqErrorMsg = '';
 
+      // Leer jornada habitual del formulario
       const { schedInicio, schedFin, workDays } = getScheduleMinutes();
       const hStr = m => `${Math.floor(m/60).toString().padStart(2,'0')}:${(m%60).toString().padStart(2,'0')}`;
       const dayNames = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
@@ -1019,11 +692,11 @@ function initUploadZone() {
           horas  = groqHoras;
           usedAI = true;
         } else {
-          console.warn('Groq visión respondió con 0 horas.');
+          console.warn('Groq visión respondió con 0 horas. Usando regex como fallback.');
         }
       } catch (groqErr) {
-        groqErrorMsg = groqErr.message;
         console.error('❌ Groq error:', groqErr.message);
+        showToast(`⚠️ Groq: ${groqErr.message}. Usando detección clásica…`, 'info');
       }
 
       // 4. Fallback: regex sobre el texto digital
@@ -1037,38 +710,21 @@ function initUploadZone() {
 
       if (horas) {
         fillHoursInputs(horas);
+        // Guardar el nombre en un data attribute del botón de calcular
+        // para que renderResults y el export lo tengan disponible
         document.getElementById('calculate-btn').dataset.nombre = nombre;
-
-        if (usedAI) {
-          const nombreMsg = nombre ? ` · ${nombre}` : '';
-          showToast(`✨ IA Groq (visión + OCR)${nombreMsg}: horas autocompletadas.`, 'success');
-        } else {
-          // Regex tuvo éxito pero IA falló → panel informativo + éxito parcial
-          showToast('🔍 Datos parciales detectados. Revisa los valores.', 'info');
-          if (groqErrorMsg) {
-            showManualFallbackPanel('ai_error', groqErrorMsg);
-          } else {
-            showManualFallbackPanel('regex_only');
-          }
-        }
+        const method = usedAI ? '✨ IA Groq (visión + OCR)' : '🔍 Detección automática';
+        const nombreMsg = nombre ? ` · ${nombre}` : '';
+        showToast(`${method}${nombreMsg}: horas autocompletadas correctamente.`, 'success');
       } else {
-        // Ningún método encontró horas
-        if (groqErrorMsg) {
-          showManualFallbackPanel('ai_error', groqErrorMsg);
-        } else if (isScanned) {
-          showManualFallbackPanel('ai_scanned');
-        } else {
-          showManualFallbackPanel('total_fail');
-        }
-        showToast('No se detectaron horas. Consulta las sugerencias en el panel.', 'info');
+        showToast('No se detectaron horas. Completa el formulario manual.', 'info');
       }
 
       setTimeout(() => parseStatus.classList.add('hidden'), 1500);
     } catch (err) {
       console.error('💥 Error procesando PDF:', err);
       setProgress(0, 'Error al leer el PDF.');
-      showManualFallbackPanel('ai_error', err.message || 'Error inesperado al leer el archivo.');
-      showToast(`Error al leer el PDF. Consulta las sugerencias.`, 'error');
+      showToast(`Error: ${err.message || 'No se pudo leer el PDF.'}`, 'error');
       setTimeout(() => parseStatus.classList.add('hidden'), 3000);
     }
   }
@@ -1158,15 +814,6 @@ function initCalculateButton() {
   const btn = document.getElementById('calculate-btn');
 
   btn.addEventListener('click', () => {
-    // 1. Validar horario laboral
-    const schedVal = validateSchedule();
-    if (!schedVal.ok) {
-      showToast(`⏰ ${schedVal.msg}`, 'error');
-      document.getElementById('card-salary')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      return;
-    }
-
-    // 2. Validar salario
     const salary  = parseSalary(document.getElementById('salary-input').value);
     const jornada = parseInt(document.getElementById('weekly-hours-select').value, 10);
 
@@ -1279,12 +926,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Auto-compute preview on jornada change
   document.getElementById('weekly-hours-select').dispatchEvent(new Event('change'));
-
-  // Auto-limpiar errores de horario cuando el usuario corrige los inputs
-  ['schedule-start', 'schedule-end'].forEach(id => {
-    document.getElementById(id)?.addEventListener('change', () => {
-      document.getElementById('schedule-start')?.classList.remove('input--error');
-      document.getElementById('schedule-end')?.classList.remove('input--error');
-    });
-  });
 });
