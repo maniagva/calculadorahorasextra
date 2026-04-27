@@ -290,13 +290,110 @@ async function renderPDFToImages(pdf, onProgress, maxPages = 4) {
   return images;
 }
 
-/* ── Festivos Colombia 2026 ──────────────────────────── */
-const FESTIVOS_CO = new Set([
+/* ══════════════════════════════════════════════════════
+   FESTIVOS COLOMBIA – carga dinámica vía date.nager.at
+   ══════════════════════════════════════════════════════ */
+
+/**
+ * Set de respaldo con los festivos 2026 (se usa si la API no responde).
+ * Formato interno: 'DD/MM/YYYY'
+ */
+const FESTIVOS_FALLBACK_2026 = new Set([
   '01/01/2026','12/01/2026','23/03/2026','02/04/2026','03/04/2026',
   '01/05/2026','18/05/2026','08/06/2026','15/06/2026','29/06/2026',
   '20/07/2026','07/08/2026','17/08/2026','12/10/2026','02/11/2026',
   '16/11/2026','08/12/2026','25/12/2026',
 ]);
+
+/** Caché en memoria: { 2026: Set{'DD/MM/YYYY', ...}, 2025: Set{...} } */
+const _festivosCache = {};
+
+/**
+ * Convierte 'YYYY-MM-DD' (formato Nager) a 'DD/MM/YYYY' (formato interno).
+ */
+function isoToDDMMYYYY(iso) {
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+/**
+ * Obtiene el Set de festivos colombianos para un año dado.
+ * Orden de prioridad:
+ *  1. Cache en memoria (misma sesión)
+ *  2. localStorage (TTL 30 días)
+ *  3. API date.nager.at
+ *  4. Fallback hardcoded (solo año 2026)
+ *
+ * @param {number} year
+ * @returns {Promise<Set<string>>}  Set de 'DD/MM/YYYY'
+ */
+async function fetchFestivos(year) {
+  // 1. Memoria
+  if (_festivosCache[year]) return _festivosCache[year];
+
+  // 2. localStorage
+  const cacheKey = `festivos_co_${year}`;
+  try {
+    const stored = localStorage.getItem(cacheKey);
+    if (stored) {
+      const { ts, data } = JSON.parse(stored);
+      const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+      if (Date.now() - ts < THIRTY_DAYS) {
+        const s = new Set(data);
+        _festivosCache[year] = s;
+        console.log(`📅 Festivos ${year} desde cache local (${s.size} días).`);
+        return s;
+      }
+    }
+  } catch (_) { /* localStorage no disponible */ }
+
+  // 3. API
+  try {
+    const res = await fetch(
+      `https://date.nager.at/api/v3/PublicHolidays/${year}/CO`,
+      { signal: AbortSignal.timeout(5000) }  // timeout 5 s
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const dates = json.map(h => isoToDDMMYYYY(h.date));
+    const s = new Set(dates);
+    _festivosCache[year] = s;
+
+    // Guardar en localStorage
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: dates }));
+    } catch (_) {}
+
+    console.log(`📅 Festivos ${year} descargados de Nager.at (${s.size} días).`);
+    return s;
+  } catch (err) {
+    console.warn(`⚠️ No se pudieron cargar festivos ${year} desde la API: ${err.message}. Usando respaldo.`);
+  }
+
+  // 4. Fallback
+  const fallback = year === 2026 ? FESTIVOS_FALLBACK_2026 : new Set();
+  _festivosCache[year] = fallback;
+  return fallback;
+}
+
+/**
+ * Pre-carga los festivos de todos los años presentes en los registros.
+ * Retorna un Map { year → Set<'DD/MM/YYYY'> } para consulta O(1).
+ *
+ * @param {Array} registros  [{fecha:'DD/MM/YYYY', ...}]
+ * @returns {Promise<Map<number,Set<string>>>}
+ */
+async function precargarFestivos(registros) {
+  const years = [...new Set(registros.map(r => {
+    const parts = r.fecha.split('/');
+    return parseInt(parts[2], 10);
+  }).filter(y => !isNaN(y)))];
+
+  const entries = await Promise.all(
+    years.map(async y => [y, await fetchFestivos(y)])
+  );
+  return new Map(entries);
+}
 
 /**
  * Convierte "HH:MM" a minutos desde medianoche.
@@ -331,7 +428,9 @@ function inter(a, b, c, d) {
  * @param {number} schedFin    minutos desde medianoche (ej. 1020 = 17:00)
  * @param {number[]} workDays  días laborales (0=Dom…6=Sáb). El resto son días de descanso.
  */
-function calcularDesdeRegistros(registros, schedInicio = 480, schedFin = 1020, workDays = [1,2,3,4,5]) {
+async function calcularDesdeRegistros(registros, schedInicio = 480, schedFin = 1020, workDays = [1,2,3,4,5]) {
+  // Pre-cargar festivos de cada año presente en los registros (API + cache)
+  const festivosPorAnio = await precargarFestivos(registros);
   const D_I = 360;    // 06:00 AM
   const D_F = 1140;   // 07:00 PM
   const DIA = 1440;   // 24 × 60
@@ -345,7 +444,8 @@ function calcularDesdeRegistros(registros, schedInicio = 480, schedFin = 1020, w
   registros.forEach(reg => {
     const [dd, mm, yyyy] = reg.fecha.split('/').map(Number);
     const fecha   = new Date(yyyy, mm - 1, dd);
-    const esDesc = FESTIVOS_CO.has(reg.fecha) || !workDays.includes(fecha.getDay());
+    const festivosAnio = festivosPorAnio.get(yyyy) || new Set();
+    const esDesc = festivosAnio.has(reg.fecha) || !workDays.includes(fecha.getDay());
 
     let ini = toMin(reg.ingreso);
     let fin = toMin(reg.salida);
@@ -498,7 +598,7 @@ Reglas:
   if (!Array.isArray(registros) || registros.length === 0) return { horas: null, nombre };
 
   // Pasar el horario laboral y los días de descanso para clasificar correctamente
-  return { horas: calcularDesdeRegistros(registros, schedInicio, schedFin, workDays), nombre };
+  return { horas: await calcularDesdeRegistros(registros, schedInicio, schedFin, workDays), nombre };
 }
 
 /**
@@ -593,6 +693,54 @@ function parseHoursFromText(text) {
   // Redondear acumuladores
   Object.keys(acc).forEach(k => { acc[k] = Math.round(acc[k] * 100) / 100; });
   return found ? acc : null;
+}
+
+/* ══════════════════════════════════════════════════════
+   VALIDACIÓN DEL HORARIO LABORAL
+   ══════════════════════════════════════════════════════ */
+
+/**
+ * Valida que los inputs de horario habitual sean coherentes antes de
+ * procesar el PDF o calcular las horas.
+ *
+ * Reglas:
+ *  - Ambos campos deben estar completos
+ *  - schedInicio < schedFin  (no se soportan turnos que crucen medianoche)
+ *  - La diferencia mínima es 1 hora (evita jornadas de 0 min)
+ *  - schedFin no puede exceder las 23:59
+ *
+ * @returns {{ ok: boolean, msg: string }}
+ */
+function validateSchedule() {
+  const startEl = document.getElementById('schedule-start');
+  const endEl   = document.getElementById('schedule-end');
+
+  // Limpiar estado de error previo
+  [startEl, endEl].forEach(el => el?.classList.remove('input--error'));
+
+  const { schedInicio, schedFin } = getScheduleMinutes();
+
+  if (!startEl?.value || !endEl?.value) {
+    startEl?.classList.add('input--error');
+    endEl?.classList.add('input--error');
+    return { ok: false, msg: 'Completa los campos de inicio y fin de jornada habitual.' };
+  }
+
+  if (schedInicio >= schedFin) {
+    startEl?.classList.add('input--error');
+    endEl?.classList.add('input--error');
+    return {
+      ok: false,
+      msg: `La hora de inicio (${startEl.value}) debe ser anterior a la hora de fin (${endEl.value}) de la jornada.`,
+    };
+  }
+
+  if (schedFin - schedInicio < 60) {
+    endEl?.classList.add('input--error');
+    return { ok: false, msg: 'La jornada habitual debe tener al menos 1 hora de duración.' };
+  }
+
+  return { ok: true, msg: '' };
 }
 
 /* ══════════════════════════════════════════════════════
@@ -794,6 +942,35 @@ function initUploadZone() {
       return;
     }
 
+    // Validación de magic bytes: los primeros 5 bytes deben ser %PDF-
+    const isRealPDF = await new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const header = new Uint8Array(e.target.result);
+        // %PDF- = 0x25 0x50 0x44 0x46 0x2D
+        resolve(
+          header[0] === 0x25 && header[1] === 0x50 &&
+          header[2] === 0x44 && header[3] === 0x46 && header[4] === 0x2D
+        );
+      };
+      reader.onerror = () => resolve(false);
+      reader.readAsArrayBuffer(file.slice(0, 5));
+    });
+
+    if (!isRealPDF) {
+      showToast('El archivo no es un PDF válido (firma incorrecta).', 'error');
+      return;
+    }
+
+    // Validar horario antes de procesar
+    const schedVal = validateSchedule();
+    if (!schedVal.ok) {
+      showToast(`⏰ ${schedVal.msg}`, 'error');
+      // Scroll al card de configuración para que el usuario vea los inputs marcados
+      document.getElementById('card-salary')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
     // Ocultar panel de error anterior al procesar un nuevo archivo
     hideFallbackPanel();
 
@@ -981,6 +1158,15 @@ function initCalculateButton() {
   const btn = document.getElementById('calculate-btn');
 
   btn.addEventListener('click', () => {
+    // 1. Validar horario laboral
+    const schedVal = validateSchedule();
+    if (!schedVal.ok) {
+      showToast(`⏰ ${schedVal.msg}`, 'error');
+      document.getElementById('card-salary')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
+    // 2. Validar salario
     const salary  = parseSalary(document.getElementById('salary-input').value);
     const jornada = parseInt(document.getElementById('weekly-hours-select').value, 10);
 
@@ -1093,4 +1279,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Auto-compute preview on jornada change
   document.getElementById('weekly-hours-select').dispatchEvent(new Event('change'));
+
+  // Auto-limpiar errores de horario cuando el usuario corrige los inputs
+  ['schedule-start', 'schedule-end'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', () => {
+      document.getElementById('schedule-start')?.classList.remove('input--error');
+      document.getElementById('schedule-end')?.classList.remove('input--error');
+    });
+  });
 });
