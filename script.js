@@ -290,13 +290,110 @@ async function renderPDFToImages(pdf, onProgress, maxPages = 4) {
   return images;
 }
 
-/* ── Festivos Colombia 2026 ──────────────────────────── */
-const FESTIVOS_CO = new Set([
+/* ══════════════════════════════════════════════════════
+   FESTIVOS COLOMBIA – carga dinámica vía date.nager.at
+   ══════════════════════════════════════════════════════ */
+
+/**
+ * Set de respaldo con los festivos 2026 (se usa si la API no responde).
+ * Formato interno: 'DD/MM/YYYY'
+ */
+const FESTIVOS_FALLBACK_2026 = new Set([
   '01/01/2026','12/01/2026','23/03/2026','02/04/2026','03/04/2026',
   '01/05/2026','18/05/2026','08/06/2026','15/06/2026','29/06/2026',
   '20/07/2026','07/08/2026','17/08/2026','12/10/2026','02/11/2026',
   '16/11/2026','08/12/2026','25/12/2026',
 ]);
+
+/** Caché en memoria: { 2026: Set{'DD/MM/YYYY', ...}, 2025: Set{...} } */
+const _festivosCache = {};
+
+/**
+ * Convierte 'YYYY-MM-DD' (formato Nager) a 'DD/MM/YYYY' (formato interno).
+ */
+function isoToDDMMYYYY(iso) {
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+/**
+ * Obtiene el Set de festivos colombianos para un año dado.
+ * Orden de prioridad:
+ *  1. Cache en memoria (misma sesión)
+ *  2. localStorage (TTL 30 días)
+ *  3. API date.nager.at
+ *  4. Fallback hardcoded (solo año 2026)
+ *
+ * @param {number} year
+ * @returns {Promise<Set<string>>}  Set de 'DD/MM/YYYY'
+ */
+async function fetchFestivos(year) {
+  // 1. Memoria
+  if (_festivosCache[year]) return _festivosCache[year];
+
+  // 2. localStorage
+  const cacheKey = `festivos_co_${year}`;
+  try {
+    const stored = localStorage.getItem(cacheKey);
+    if (stored) {
+      const { ts, data } = JSON.parse(stored);
+      const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+      if (Date.now() - ts < THIRTY_DAYS) {
+        const s = new Set(data);
+        _festivosCache[year] = s;
+        console.log(`📅 Festivos ${year} desde cache local (${s.size} días).`);
+        return s;
+      }
+    }
+  } catch (_) { /* localStorage no disponible */ }
+
+  // 3. API
+  try {
+    const res = await fetch(
+      `https://date.nager.at/api/v3/PublicHolidays/${year}/CO`,
+      { signal: AbortSignal.timeout(5000) }  // timeout 5 s
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const dates = json.map(h => isoToDDMMYYYY(h.date));
+    const s = new Set(dates);
+    _festivosCache[year] = s;
+
+    // Guardar en localStorage
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: dates }));
+    } catch (_) {}
+
+    console.log(`📅 Festivos ${year} descargados de Nager.at (${s.size} días).`);
+    return s;
+  } catch (err) {
+    console.warn(`⚠️ No se pudieron cargar festivos ${year} desde la API: ${err.message}. Usando respaldo.`);
+  }
+
+  // 4. Fallback
+  const fallback = year === 2026 ? FESTIVOS_FALLBACK_2026 : new Set();
+  _festivosCache[year] = fallback;
+  return fallback;
+}
+
+/**
+ * Pre-carga los festivos de todos los años presentes en los registros.
+ * Retorna un Map { year → Set<'DD/MM/YYYY'> } para consulta O(1).
+ *
+ * @param {Array} registros  [{fecha:'DD/MM/YYYY', ...}]
+ * @returns {Promise<Map<number,Set<string>>>}
+ */
+async function precargarFestivos(registros) {
+  const years = [...new Set(registros.map(r => {
+    const parts = r.fecha.split('/');
+    return parseInt(parts[2], 10);
+  }).filter(y => !isNaN(y)))];
+
+  const entries = await Promise.all(
+    years.map(async y => [y, await fetchFestivos(y)])
+  );
+  return new Map(entries);
+}
 
 /**
  * Convierte "HH:MM" a minutos desde medianoche.
@@ -331,7 +428,10 @@ function inter(a, b, c, d) {
  * @param {number} schedFin    minutos desde medianoche (ej. 1020 = 17:00)
  * @param {number[]} workDays  días laborales (0=Dom…6=Sáb). El resto son días de descanso.
  */
-function calcularDesdeRegistros(registros, schedInicio = 480, schedFin = 1020, workDays = [1,2,3,4,5]) {
+async function calcularDesdeRegistros(registros, schedInicio = 480, schedFin = 1020, workDays = [1,2,3,4,5]) {
+  // Pre-cargar festivos de cada año presente en los registros (API + cache)
+  const festivosPorAnio = await precargarFestivos(registros);
+
   const D_I = 360;    // 06:00 AM
   const D_F = 1140;   // 07:00 PM
   const DIA = 1440;   // 24 × 60
@@ -345,7 +445,8 @@ function calcularDesdeRegistros(registros, schedInicio = 480, schedFin = 1020, w
   registros.forEach(reg => {
     const [dd, mm, yyyy] = reg.fecha.split('/').map(Number);
     const fecha   = new Date(yyyy, mm - 1, dd);
-    const esDesc = FESTIVOS_CO.has(reg.fecha) || !workDays.includes(fecha.getDay());
+    const festivosAnio = festivosPorAnio.get(yyyy) || new Set();
+    const esDesc = festivosAnio.has(reg.fecha) || !workDays.includes(fecha.getDay());
 
     let ini = toMin(reg.ingreso);
     let fin = toMin(reg.salida);
@@ -498,7 +599,7 @@ Reglas:
   if (!Array.isArray(registros) || registros.length === 0) return { horas: null, nombre };
 
   // Pasar el horario laboral y los días de descanso para clasificar correctamente
-  return { horas: calcularDesdeRegistros(registros, schedInicio, schedFin, workDays), nombre };
+  return { horas: await calcularDesdeRegistros(registros, schedInicio, schedFin, workDays), nombre };
 }
 
 /**
