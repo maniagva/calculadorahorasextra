@@ -649,6 +649,27 @@ function initUploadZone() {
       return;
     }
 
+    // Validación de magic bytes: los primeros 5 bytes deben ser %PDF-
+    // Esto atrapa archivos renombrados a .pdf que no son PDFs reales.
+    const isRealPDF = await new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const header = new Uint8Array(e.target.result);
+        // %PDF- = 0x25 0x50 0x44 0x46 0x2D
+        resolve(
+          header[0] === 0x25 && header[1] === 0x50 &&
+          header[2] === 0x44 && header[3] === 0x46 && header[4] === 0x2D
+        );
+      };
+      reader.onerror = () => resolve(false);
+      reader.readAsArrayBuffer(file.slice(0, 5));
+    });
+
+    if (!isRealPDF) {
+      showToast('El archivo no es un PDF válido (firma %PDF- no encontrada).', 'error');
+      return;
+    }
+
     fileName.textContent = file.name;
     fileSize.textContent = formatBytes(file.size);
     fileInfo.classList.remove('hidden');
