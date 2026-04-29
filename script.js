@@ -591,6 +591,91 @@ function parseHoursFromText(text) {
 }
 
 
+/* ══════════════════════════════════════════════════════
+   PANEL DE FALLBACK – guía contextual al usuario
+   ══════════════════════════════════════════════════════ */
+
+/**
+ * Muestra el panel de guía con mensaje específico según el tipo de fallo.
+ * @param {'ai_error'|'ai_zero'|'ai_scanned'|'regex_only'|'total_fail'} reason
+ * @param {string} [errorMsg]  detalle técnico opcional
+ */
+function showManualFallbackPanel(reason, errorMsg = '') {
+  const panel    = document.getElementById('fallback-panel');
+  const titleEl  = document.getElementById('fallback-title');
+  const detailEl = document.getElementById('fallback-detail');
+  const tipsEl   = document.getElementById('fallback-tips');
+  const ctaBtn   = document.getElementById('fallback-cta-btn');
+  if (!panel) return;
+
+  const configs = {
+    ai_zero: {
+      t: 'La IA no encontró registros de horas',
+      d: 'El modelo analizó el PDF pero no detectó filas con hora de ingreso y salida.',
+      tips: [
+        'Verifica que el PDF contenga una tabla con columnas «HORA INGRESO» y «HORA SALIDA».',
+        'Si el texto está en una imagen, asegúrate de que esté nítida para el OCR.',
+        'Puedes ingresar las horas manualmente en el formulario de abajo.',
+      ],
+    },
+    ai_error: {
+      t: 'Error al conectar con la IA',
+      d: errorMsg ? `Groq respondió: "${errorMsg}"` : 'No se pudo contactar el servicio de IA.',
+      tips: [
+        'Comprueba tu conexión a internet.',
+        'El servicio de Groq puede estar temporalmente no disponible.',
+        'Ingresa las horas manualmente mientras se restablece el servicio.',
+      ],
+    },
+    ai_scanned: {
+      t: 'PDF escaneado o sin texto seleccionable',
+      d: 'El PDF no tiene texto digital; la IA intentó leer la imagen con OCR.',
+      tips: [
+        'Si el OCR falló, la imagen puede estar borrosa o en baja resolución.',
+        'Intenta subir un PDF generado digitalmente (no escaneado).',
+        'Si no hay otra versión disponible, ingresa los datos manualmente.',
+      ],
+    },
+    regex_only: {
+      t: 'Datos parciales — revisa los valores',
+      d: 'La IA no pudo procesar el archivo. Se usó detección por texto como respaldo.',
+      tips: [
+        'Revisa los campos autocompletados y corrige cualquier valor incorrecto.',
+        'Los campos vacíos pueden indicar un formato de PDF no estándar.',
+      ],
+    },
+    total_fail: {
+      t: 'No se pudo extraer ningún dato',
+      d: 'Ni la IA ni la detección clásica pudieron interpretar el archivo.',
+      tips: [
+        'El PDF puede estar protegido, dañado o en un formato no compatible.',
+        'Verifica que el archivo sea un PDF válido con información de horas.',
+        'Ingresa todas las horas manualmente usando el formulario de abajo.',
+      ],
+    },
+  };
+
+  const cfg = configs[reason] || configs.total_fail;
+  titleEl.textContent  = cfg.t;
+  detailEl.textContent = cfg.d;
+  tipsEl.innerHTML     = cfg.tips.map(t => `<li>${t}</li>`).join('');
+  panel.classList.remove('hidden');
+
+  // CTA: scroll + highlight al card manual
+  ctaBtn.onclick = () => {
+    const card = document.getElementById('card-manual');
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    card.classList.add('card--highlight');
+    setTimeout(() => card.classList.remove('card--highlight'), 2000);
+  };
+}
+
+/** Oculta el panel de fallback (al subir un nuevo archivo). */
+function hideFallbackPanel() {
+  document.getElementById('fallback-panel')?.classList.add('hidden');
+}
+
 /**
  * Valida que los inputs de horario habitual sean coherentes.
  * Marca visualmente los inputs incorrectos con la clase input--error.
@@ -770,6 +855,9 @@ function initUploadZone() {
       return;
     }
 
+    // Ocultar panel de error anterior al procesar nuevo archivo
+    hideFallbackPanel();
+
     fileName.textContent = file.name;
     fileSize.textContent = formatBytes(file.size);
     fileInfo.classList.remove('hidden');
@@ -791,10 +879,12 @@ function initUploadZone() {
       const images = await renderPDFToImages(pdf, (pct, msg) => setProgress(pct, msg));
       console.log(`🖼️ ${images.length} página(s) renderizadas para visión IA`);
 
-      // 3. Groq visión extrae nombre + registros (texto impreso + manuscrito) → JS calcula
-      let horas   = null;
-      let nombre  = '';
-      let usedAI  = false;
+      // 3. Groq visión extrae nombre + registros → JS calcula
+      let horas        = null;
+      let nombre       = '';
+      let usedAI       = false;
+      let groqErrorMsg = '';
+      const isScanned  = text.trim().length < 80; // poco texto → probable PDF escaneado
 
       // Leer jornada habitual del formulario
       const { schedInicio, schedFin, workDays } = getScheduleMinutes();
@@ -813,11 +903,11 @@ function initUploadZone() {
           horas  = groqHoras;
           usedAI = true;
         } else {
-          console.warn('Groq visión respondió con 0 horas. Usando regex como fallback.');
+          console.warn('Groq visión respondió con 0 horas.');
         }
       } catch (groqErr) {
+        groqErrorMsg = groqErr.message;
         console.error('❌ Groq error:', groqErr.message);
-        showToast(`⚠️ Groq: ${groqErr.message}. Usando detección clásica…`, 'info');
       }
 
       // 4. Fallback: regex sobre el texto digital
@@ -831,21 +921,29 @@ function initUploadZone() {
 
       if (horas) {
         fillHoursInputs(horas);
-        // Guardar el nombre en un data attribute del botón de calcular
-        // para que renderResults y el export lo tengan disponible
         document.getElementById('calculate-btn').dataset.nombre = nombre;
-        const method = usedAI ? '✨ IA Groq (visión + OCR)' : '🔍 Detección automática';
-        const nombreMsg = nombre ? ` · ${nombre}` : '';
-        showToast(`${method}${nombreMsg}: horas autocompletadas correctamente.`, 'success');
+
+        if (usedAI) {
+          const nombreMsg = nombre ? ` · ${nombre}` : '';
+          showToast(`✨ IA Groq (visión + OCR)${nombreMsg}: horas autocompletadas.`, 'success');
+        } else {
+          // Regex funcionó, IA falló → panel informativo
+          showToast('🔍 Datos parciales detectados. Revisa los valores.', 'info');
+          showManualFallbackPanel(groqErrorMsg ? 'ai_error' : 'regex_only', groqErrorMsg);
+        }
       } else {
-        showToast('No se detectaron horas. Completa el formulario manual.', 'info');
+        // Ningún método encontró horas
+        const reason = groqErrorMsg ? 'ai_error' : isScanned ? 'ai_scanned' : 'total_fail';
+        showManualFallbackPanel(reason, groqErrorMsg);
+        showToast('No se detectaron horas. Consulta las sugerencias en el panel.', 'info');
       }
 
       setTimeout(() => parseStatus.classList.add('hidden'), 1500);
     } catch (err) {
       console.error('💥 Error procesando PDF:', err);
       setProgress(0, 'Error al leer el PDF.');
-      showToast(`Error: ${err.message || 'No se pudo leer el PDF.'}`, 'error');
+      showManualFallbackPanel('ai_error', err.message || 'Error inesperado al leer el archivo.');
+      showToast('Error al leer el PDF. Revisa las sugerencias en el panel.', 'error');
       setTimeout(() => parseStatus.classList.add('hidden'), 3000);
     }
   }
