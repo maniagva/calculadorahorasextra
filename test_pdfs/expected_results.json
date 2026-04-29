@@ -1,0 +1,26 @@
+{
+  "ejemplo_1_ordinario.pdf": {
+    "nombre": "Juan Pérez",
+    "horas": {
+      "extraDiurna": 0,
+      "extraNocturna": 0,
+      "recargoNocturno": 0,
+      "dominicalDiurno": 0,
+      "dominicalNocturno": 0,
+      "extraDominicalDiurno": 0,
+      "extraDominicalNocturno": 0
+    }
+  },
+  "ejemplo_2_nocturno.pdf": {
+    "nombre": "Ana Gómez",
+    "horas": {
+      "extraDiurna": 0,
+      "extraNocturna": 2,
+      "recargoNocturno": 5,
+      "dominicalDiurno": 0,
+      "dominicalNocturno": 0,
+      "extraDominicalDiurno": 0,
+      "extraDominicalNocturno": 0
+    }
+  }
+}

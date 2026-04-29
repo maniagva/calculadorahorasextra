@@ -608,7 +608,7 @@ Reglas:
  * @returns {HorasInput|null}
  */
 function parseHoursFromText(text) {
-  const t = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  let t = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const acc = {
     extraDiurna: 0, extraNocturna: 0, recargoNocturno: 0,
     dominicalDiurno: 0, dominicalNocturno: 0,
@@ -641,13 +641,13 @@ function parseHoursFromText(text) {
     { re: new RegExp(`extras?\\s+nocturnas?[^0-9\\n]*${N}`, 'g'),           key: 'extraNocturna' },
 
     // ── Abreviaturas estándar (con espacio antes del número) ───────
-    { re: /\bhed\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraDiurna' },
-    { re: /\bhen\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraNocturna' },
-    { re: /\brn\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'recargoNocturno' },
-    { re: /\bdd\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'dominicalDiurno' },
-    { re: /\bdn\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'dominicalNocturno' },
-    { re: /\bhedd\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraDominicalDiurno' },
-    { re: /\bhedn\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraDominicalNocturno' },
+    { re: /\bhed\b[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraDiurna' },
+    { re: /\bhen\b[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraNocturna' },
+    { re: /\brn\b[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'recargoNocturno' },
+    { re: /\bdd\b[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'dominicalDiurno' },
+    { re: /\bdn\b[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'dominicalNocturno' },
+    { re: /\bhedd\b[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraDominicalDiurno' },
+    { re: /\bhedn\b[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraDominicalNocturno' },
 
     // ── Abreviaturas pegadas al número: HED2.5, HEN1,5 ───────────
     { re: /\bhed([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraDiurna' },
@@ -658,18 +658,18 @@ function parseHoursFromText(text) {
 
     // ── Formato tabla invertida: número → etiqueta ────────────────
     // ej. "2.5  hora extra diurna" o "1,0  HED"
-    { re: new RegExp(`${N}\\s+(?:hora\\s+)?extra\\s+diurna`, 'g'),          key: 'extraDiurna' },
-    { re: new RegExp(`${N}\\s+(?:hora\\s+)?extra\\s+nocturna`, 'g'),        key: 'extraNocturna' },
-    { re: new RegExp(`${N}\\s+recargo\\s+nocturno`, 'g'),                   key: 'recargoNocturno' },
-    { re: new RegExp(`${N}\\s+(?:hora\\s+)?dominical\\s+diurna?`, 'g'),     key: 'dominicalDiurno' },
-    { re: new RegExp(`${N}\\s+(?:hora\\s+)?dominical\\s+nocturna?`, 'g'),   key: 'dominicalNocturno' },
-    { re: new RegExp(`${N}\\s+hed\\b`, 'gi'),  key: 'extraDiurna' },
-    { re: new RegExp(`${N}\\s+hen\\b`, 'gi'),  key: 'extraNocturna' },
-    { re: new RegExp(`${N}\\s+hedd\\b`, 'gi'), key: 'extraDominicalDiurno' },
-    { re: new RegExp(`${N}\\s+hedn\\b`, 'gi'), key: 'extraDominicalNocturno' },
-    { re: new RegExp(`${N}\\s+rn\\b`, 'gi'),   key: 'recargoNocturno' },
-    { re: new RegExp(`${N}\\s+dd\\b`, 'gi'),   key: 'dominicalDiurno' },
-    { re: new RegExp(`${N}\\s+dn\\b`, 'gi'),   key: 'dominicalNocturno' },
+    { re: new RegExp(`${N}[ \\t]+(?:hora[ \\t]+)?extra[ \\t]+diurna`, 'g'),          key: 'extraDiurna' },
+    { re: new RegExp(`${N}[ \\t]+(?:hora[ \\t]+)?extra[ \\t]+nocturna`, 'g'),        key: 'extraNocturna' },
+    { re: new RegExp(`${N}[ \\t]+recargo[ \\t]+nocturno`, 'g'),                   key: 'recargoNocturno' },
+    { re: new RegExp(`${N}[ \\t]+(?:hora[ \\t]+)?dominical[ \\t]+diurna?`, 'g'),     key: 'dominicalDiurno' },
+    { re: new RegExp(`${N}[ \\t]+(?:hora[ \\t]+)?dominical[ \\t]+nocturna?`, 'g'),   key: 'dominicalNocturno' },
+    { re: new RegExp(`${N}[ \\t]+hed\\b`, 'gi'),  key: 'extraDiurna' },
+    { re: new RegExp(`${N}[ \\t]+hen\\b`, 'gi'),  key: 'extraNocturna' },
+    { re: new RegExp(`${N}[ \\t]+hedd\\b`, 'gi'), key: 'extraDominicalDiurno' },
+    { re: new RegExp(`${N}[ \\t]+hedn\\b`, 'gi'), key: 'extraDominicalNocturno' },
+    { re: new RegExp(`${N}[ \\t]+rn\\b`, 'gi'),   key: 'recargoNocturno' },
+    { re: new RegExp(`${N}[ \\t]+dd\\b`, 'gi'),   key: 'dominicalDiurno' },
+    { re: new RegExp(`${N}[ \\t]+dn\\b`, 'gi'),   key: 'dominicalNocturno' },
   ];
 
   patterns.forEach(({ re, key }) => {
@@ -682,6 +682,8 @@ function parseHoursFromText(text) {
       if (!isNaN(val) && val > 0 && val < 300) { // sanity cap: ignora valores absurdos
         acc[key] += val;
         found = true;
+        // Reemplazar la coincidencia con espacios para evitar que otro patrón la vuelva a contar
+        t = t.substring(0, match.index) + ' '.repeat(match[0].length) + t.substring(match.index + match[0].length);
       }
     }
   });
@@ -1264,3 +1266,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+
+/* ══════════════════════════════════════════════════════
+   EXPORTS PARA PRUEBAS (Node.js)
+   ══════════════════════════════════════════════════════ */
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    parseHoursFromText,
+    calcularDesdeRegistros,
+    precargarFestivos,
+    fetchFestivos
+  };
+}
