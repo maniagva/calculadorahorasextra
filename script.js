@@ -33,19 +33,19 @@ if (typeof pdfjsLib !== 'undefined') {
  */
 const RECARGOS = {
   // Hora extra diurna entre semana (6 AM – 7 PM)   → +25%
-  EXTRA_DIURNA:           1.25,
+  EXTRA_DIURNA: 1.25,
   // Hora extra nocturna entre semana (7 PM – 6 AM)  → +75%
-  EXTRA_NOCTURNA:         1.75,
+  EXTRA_NOCTURNA: 1.75,
   // Recargo nocturno ORDINARIO (sin hora extra)      → +35%
-  RECARGO_NOCTURNO:       1.35,
+  RECARGO_NOCTURNO: 1.35,
   // Hora ordinaria dominical/festiva diurno          → +75%
-  DOMINICAL_DIURNO:       1.75,
+  DOMINICAL_DIURNO: 1.75,
   // Hora ordinaria dominical/festiva nocturno        → +110%
-  DOMINICAL_NOCTURNO:     2.10,
+  DOMINICAL_NOCTURNO: 2.10,
   // Hora EXTRA dominical/festiva diurna              → +100%
   EXTRA_DOMINICAL_DIURNO: 2.00,
   // Hora EXTRA dominical/festiva nocturna            → +150%
-  EXTRA_DOMINICAL_NOCTURO:2.50,
+  EXTRA_DOMINICAL_NOCTURO: 2.50,
 };
 
 /** Meses en un año (para dividir salario mensual → valor hora). */
@@ -111,11 +111,11 @@ function getHoursValue(id) {
  */
 function showToast(msg, type = 'success') {
   const toast = document.getElementById('toast');
-  const icon  = document.getElementById('toast-icon');
+  const icon = document.getElementById('toast-icon');
   const msgEl = document.getElementById('toast-msg');
 
   const icons = { success: '✅', error: '❌', info: 'ℹ️' };
-  icon.textContent  = icons[type] ?? '✅';
+  icon.textContent = icons[type] ?? '✅';
   msgEl.textContent = msg;
 
   toast.classList.remove('hidden');
@@ -166,64 +166,64 @@ function calcularHorasExtra(salarioMensual, jornadaSemanal, horas) {
 
   const items = [
     {
-      tipo:     'Hora extra diurna (entre semana 6 AM–7 PM)',
+      tipo: 'Hora extra diurna (entre semana 6 AM–7 PM)',
       tagClass: 'tag-extra',
-      horas:    horas.extraDiurna,
-      factor:   RECARGOS.EXTRA_DIURNA,
-      recargo:  '+25%',
+      horas: horas.extraDiurna,
+      factor: RECARGOS.EXTRA_DIURNA,
+      recargo: '+25%',
     },
     {
-      tipo:     'Hora extra nocturna (entre semana 7 PM–6 AM)',
+      tipo: 'Hora extra nocturna (entre semana 7 PM–6 AM)',
       tagClass: 'tag-nocturno',
-      horas:    horas.extraNocturna,
-      factor:   RECARGOS.EXTRA_NOCTURNA,
-      recargo:  '+75%',
+      horas: horas.extraNocturna,
+      factor: RECARGOS.EXTRA_NOCTURNA,
+      recargo: '+75%',
     },
     {
-      tipo:     'Recargo nocturno ordinario (7 PM–6 AM)',
+      tipo: 'Recargo nocturno ordinario (7 PM–6 AM)',
       tagClass: 'tag-recargo',
-      horas:    horas.recargoNocturno,
-      factor:   RECARGOS.RECARGO_NOCTURNO,
-      recargo:  '+35%',
+      horas: horas.recargoNocturno,
+      factor: RECARGOS.RECARGO_NOCTURNO,
+      recargo: '+35%',
     },
     {
-      tipo:     'Dominical/Festivo diurno ordinario',
+      tipo: 'Dominical/Festivo diurno ordinario',
       tagClass: 'tag-dominical',
-      horas:    horas.dominicalDiurno,
-      factor:   RECARGOS.DOMINICAL_DIURNO,
-      recargo:  '+75%',
+      horas: horas.dominicalDiurno,
+      factor: RECARGOS.DOMINICAL_DIURNO,
+      recargo: '+75%',
     },
     {
-      tipo:     'Dominical/Festivo nocturno ordinario',
+      tipo: 'Dominical/Festivo nocturno ordinario',
       tagClass: 'tag-dominical',
-      horas:    horas.dominicalNocturno,
-      factor:   RECARGOS.DOMINICAL_NOCTURNO,
-      recargo:  '+110%',
+      horas: horas.dominicalNocturno,
+      factor: RECARGOS.DOMINICAL_NOCTURNO,
+      recargo: '+110%',
     },
     {
-      tipo:     'Hora extra Dominical/Festivo diurna',
+      tipo: 'Hora extra Dominical/Festivo diurna',
       tagClass: 'tag-extra',
-      horas:    horas.extraDominicalDiurno,
-      factor:   RECARGOS.EXTRA_DOMINICAL_DIURNO,
-      recargo:  '+100%',
+      horas: horas.extraDominicalDiurno,
+      factor: RECARGOS.EXTRA_DOMINICAL_DIURNO,
+      recargo: '+100%',
     },
     {
-      tipo:     'Hora extra Dominical/Festivo nocturna',
+      tipo: 'Hora extra Dominical/Festivo nocturna',
       tagClass: 'tag-nocturno',
-      horas:    horas.extraDominicalNocturno,
-      factor:   RECARGOS.EXTRA_DOMINICAL_NOCTURO,
-      recargo:  '+150%',
+      horas: horas.extraDominicalNocturno,
+      factor: RECARGOS.EXTRA_DOMINICAL_NOCTURO,
+      recargo: '+150%',
     },
   ];
 
   let totalHoras = 0;
-  let total      = 0;
+  let total = 0;
 
   const lineas = items.map((item) => {
     const valorUnitario = horaOrdinaria * item.factor;
-    const subtotal      = valorUnitario * item.horas;
+    const subtotal = valorUnitario * item.horas;
     totalHoras += item.horas;
-    total      += subtotal;
+    total += subtotal;
     return { ...item, valorUnitario, subtotal };
   });
 
@@ -252,10 +252,10 @@ async function extractTextFromPDF(file, onProgress) {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   let fullText = '';
-  const total  = pdf.numPages;
+  const total = pdf.numPages;
   for (let i = 1; i <= total; i++) {
     onProgress(Math.round((i / total) * 25), `Leyendo página ${i} de ${total}…`);
-    const page    = await pdf.getPage(i);
+    const page = await pdf.getPage(i);
     const content = await page.getTextContent();
     fullText += content.items.map((s) => s.str).join(' ') + '\n';
   }
@@ -271,18 +271,18 @@ async function extractTextFromPDF(file, onProgress) {
  * @returns {Promise<string[]>}  array de base64 JPEG
  */
 async function renderPDFToImages(pdf, onProgress, maxPages = 4) {
-  const total  = Math.min(pdf.numPages, maxPages);
+  const total = Math.min(pdf.numPages, maxPages);
   const images = [];
   for (let i = 1; i <= total; i++) {
     onProgress(
       25 + Math.round((i / total) * 25),
       `Renderizando página ${i} de ${total} para OCR…`
     );
-    const page     = await pdf.getPage(i);
+    const page = await pdf.getPage(i);
     const viewport = page.getViewport({ scale: 1.8 }); // resolución suficiente para manuscrito
-    const canvas   = document.createElement('canvas');
-    canvas.width   = viewport.width;
-    canvas.height  = viewport.height;
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
     await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
     // JPEG al 85% — buen balance calidad/tamaño (~150-400 KB por página)
     images.push(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]);
@@ -299,10 +299,10 @@ async function renderPDFToImages(pdf, onProgress, maxPages = 4) {
  * Formato interno: 'DD/MM/YYYY'
  */
 const FESTIVOS_FALLBACK_2026 = new Set([
-  '01/01/2026','12/01/2026','23/03/2026','02/04/2026','03/04/2026',
-  '01/05/2026','18/05/2026','08/06/2026','15/06/2026','29/06/2026',
-  '20/07/2026','07/08/2026','17/08/2026','12/10/2026','02/11/2026',
-  '16/11/2026','08/12/2026','25/12/2026',
+  '01/01/2026', '12/01/2026', '23/03/2026', '02/04/2026', '03/04/2026',
+  '01/05/2026', '18/05/2026', '08/06/2026', '15/06/2026', '29/06/2026',
+  '20/07/2026', '07/08/2026', '17/08/2026', '12/10/2026', '02/11/2026',
+  '16/11/2026', '08/12/2026', '25/12/2026',
 ]);
 
 /** Caché en memoria: { 2026: Set{'DD/MM/YYYY', ...}, 2025: Set{...} } */
@@ -362,7 +362,7 @@ async function fetchFestivos(year) {
     // Guardar en localStorage
     try {
       localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: dates }));
-    } catch (_) {}
+    } catch (_) { }
 
     console.log(`📅 Festivos ${year} descargados de Nager.at (${s.size} días).`);
     return s;
@@ -428,7 +428,7 @@ function inter(a, b, c, d) {
  * @param {number} schedFin    minutos desde medianoche (ej. 1020 = 17:00)
  * @param {number[]} workDays  días laborales (0=Dom…6=Sáb). El resto son días de descanso.
  */
-async function calcularDesdeRegistros(registros, schedInicio = 420, schedFin = 1020, workDays = [1,2,3,4,5]) {
+async function calcularDesdeRegistros(registros, schedInicio = 420, schedFin = 1020, workDays = [1, 2, 3, 4, 5]) {
   // Pre-cargar festivos de cada año presente en los registros (API + cache)
   const festivosPorAnio = await precargarFestivos(registros);
 
@@ -444,9 +444,9 @@ async function calcularDesdeRegistros(registros, schedInicio = 420, schedFin = 1
 
   registros.forEach(reg => {
     const [dd, mm, yyyy] = reg.fecha.split('/').map(Number);
-    const fecha   = new Date(yyyy, mm - 1, dd);
+    const fecha = new Date(yyyy, mm - 1, dd);
     const festivosAnio = festivosPorAnio.get(yyyy) || new Set();
-    
+
     const esDescanso = !workDays.includes(fecha.getDay());
     const esDominicalOFestivo = festivosAnio.has(reg.fecha) || fecha.getDay() === 0;
 
@@ -465,19 +465,19 @@ async function calcularDesdeRegistros(registros, schedInicio = 420, schedFin = 1
     let inSD = 0;
 
     if (!esDescanso) {
-      inS = inter(ini, fin, schedInicio, schedFin) + 
-            inter(ini, fin, schedInicio + DIA, schedFin + DIA);
+      inS = inter(ini, fin, schedInicio, schedFin) +
+        inter(ini, fin, schedInicio + DIA, schedFin + DIA);
 
       const sdI = Math.max(schedInicio, D_I);
       const sdF = Math.min(schedFin, D_F);
       if (sdI < sdF) {
-        inSD = inter(ini, fin, sdI, sdF) + 
-               inter(ini, fin, sdI + DIA, sdF + DIA);
+        inSD = inter(ini, fin, sdI, sdF) +
+          inter(ini, fin, sdI + DIA, sdF + DIA);
       }
     }
 
-    const inD = inter(ini, fin, D_I, D_F) + 
-                inter(ini, fin, D_I + DIA, D_F + DIA);
+    const inD = inter(ini, fin, D_I, D_F) +
+      inter(ini, fin, D_I + DIA, D_F + DIA);
 
     /*
      * Los 4 cuadrantes (en minutos):
@@ -486,22 +486,22 @@ async function calcularDesdeRegistros(registros, schedInicio = 420, schedFin = 1
      *   extDay   = extra diurno      → HED (+25%) o HEDD (+100%)
      *   extNight = extra nocturno    → HEN (+75%) o HEDN (+150%)
      */
-    const regDay   = inSD;
+    const regDay = inSD;
     const regNight = inS - inSD;
-    const extDay   = inD - inSD;
+    const extDay = inD - inSD;
     const extNight = duracion - inS - inD + inSD;
 
     if (esDominicalOFestivo) {
       // Domingo/festivo: las horas ordinarias también se pagan con recargo
-      acc.dominicalDiurno        += regDay   / 60;
-      acc.dominicalNocturno      += regNight / 60;
-      acc.extraDominicalDiurno   += extDay   / 60;
+      acc.dominicalDiurno += regDay / 60;
+      acc.dominicalNocturno += regNight / 60;
+      acc.extraDominicalDiurno += extDay / 60;
       acc.extraDominicalNocturno += extNight / 60;
     } else {
       // Semana (Lunes a Sábado no festivos)
       acc.recargoNocturno += regNight / 60;
-      acc.extraDiurna     += extDay   / 60;
-      acc.extraNocturna   += extNight / 60;
+      acc.extraDiurna += extDay / 60;
+      acc.extraNocturna += extNight / 60;
     }
   });
 
@@ -515,11 +515,11 @@ async function calcularDesdeRegistros(registros, schedInicio = 420, schedFin = 1
  * El modelo lee tanto texto impreso como MANUSCRITO.
  * Devuelve {horas: HorasInput, nombre: string} — JS calcula las horas.
  */
-async function extractHoursWithGroq(pdfText, images, onProgress, schedInicio = 480, schedFin = 1020, workDays = [1,2,3,4,5]) {
+async function extractHoursWithGroq(pdfText, images, onProgress, schedInicio = 480, schedFin = 1020, workDays = [1, 2, 3, 4, 5]) {
   onProgress(55, 'Analizando PDF con visión IA…');
 
   const systemPrompt =
-`Eres un experto en lectura de documentos de nómina colombiana.
+    `Eres un experto en lectura de documentos de nómina colombiana.
 Analizarás imágenes de un "REPORTE DE HORAS EXTRAS" que puede contener texto impreso Y texto escrito a mano.
 
 Tu tarea: extraer el nombre del empleado Y todos los registros de tiempo visibles.
@@ -537,7 +537,16 @@ Reglas:
 - Incluye TODAS las filas con HORA INGRESO y HORA SALIDA (impresas y manuscritas)
 - Ignora encabezados de tabla, totales, observaciones
 - Si no encuentras el nombre, usa cadena vacía ""
-- Sin markdown, sin explicaciones. Solo el JSON.`;
+- Sin markdown, sin explicaciones. Solo el JSON.
+
+REGLAS DE FECHAS:
+- Las fechas pueden venir en formato DD/MM/AA (dos dígitos para el año) o DD/MM/AAAA.
+- Si el año tiene dos dígitos, conviértelo a cuatro dígitos añadiendo "20" al inicio (siglo XXI).
+  Ejemplo: "23-03-26" → "23/03/2026", "15-12-99" → "15/12/2099".
+- El separador puede ser "/" o "-"; normalízalo a "/".
+- No uses el año 2025 ni ningún otro fijo; aplica siempre la regla del prefijo 20.`
+
+    ;
 
   // Construir contenido multimodal: texto digital + imágenes
   const userContent = [];
@@ -566,7 +575,7 @@ Reglas:
       model: 'meta-llama/llama-4-scout-17b-16e-instruct',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user',   content: userContent },
+        { role: 'user', content: userContent },
       ],
       temperature: 0,
       max_tokens: 1024,
@@ -580,7 +589,7 @@ Reglas:
 
   onProgress(85, 'Calculando horas…');
 
-  const data    = await response.json();
+  const data = await response.json();
   const content = data.choices?.[0]?.message?.content?.trim() || '';
 
   console.group('🤖 Groq Visión – Datos extraídos');
@@ -592,8 +601,8 @@ Reglas:
   const objMatch = content.match(/\{[\s\S]*\}/);
   if (!objMatch) throw new Error(`Groq no devolvió JSON. Respuesta: ${content.slice(0, 200)}`);
 
-  const parsed   = JSON.parse(objMatch[0]);
-  const nombre   = (parsed.nombre || '').trim();
+  const parsed = JSON.parse(objMatch[0]);
+  const nombre = (parsed.nombre || '').trim();
   const registros = parsed.registros;
 
   console.log('Nombre extraído:', nombre);
@@ -623,56 +632,56 @@ function parseHoursFromText(text) {
 
   const patterns = [
     // ── Nombres completos (etiqueta → número) ─────────────────────
-    { re: new RegExp(`hora\\s+extra\\s+diurna[^0-9\\n]*${N}`, 'g'),         key: 'extraDiurna' },
-    { re: new RegExp(`hora\\s+extra\\s+nocturna[^0-9\\n]*${N}`, 'g'),       key: 'extraNocturna' },
-    { re: new RegExp(`recargo\\s+nocturno[^0-9\\n]*${N}`, 'g'),             key: 'recargoNocturno' },
-    { re: new RegExp(`nocturno\\s+ordinario[^0-9\\n]*${N}`, 'g'),           key: 'recargoNocturno' },
-    { re: new RegExp(`dominical\\s+diurno[^0-9\\n]*${N}`, 'g'),             key: 'dominicalDiurno' },
-    { re: new RegExp(`dominical\\s+nocturno[^0-9\\n]*${N}`, 'g'),           key: 'dominicalNocturno' },
-    { re: new RegExp(`festivo\\s+diurno[^0-9\\n]*${N}`, 'g'),               key: 'dominicalDiurno' },
-    { re: new RegExp(`festivo\\s+nocturno[^0-9\\n]*${N}`, 'g'),             key: 'dominicalNocturno' },
-    { re: new RegExp(`extra\\s+dominical\\s+diurna?[^0-9\\n]*${N}`, 'g'),   key: 'extraDominicalDiurno' },
+    { re: new RegExp(`hora\\s+extra\\s+diurna[^0-9\\n]*${N}`, 'g'), key: 'extraDiurna' },
+    { re: new RegExp(`hora\\s+extra\\s+nocturna[^0-9\\n]*${N}`, 'g'), key: 'extraNocturna' },
+    { re: new RegExp(`recargo\\s+nocturno[^0-9\\n]*${N}`, 'g'), key: 'recargoNocturno' },
+    { re: new RegExp(`nocturno\\s+ordinario[^0-9\\n]*${N}`, 'g'), key: 'recargoNocturno' },
+    { re: new RegExp(`dominical\\s+diurno[^0-9\\n]*${N}`, 'g'), key: 'dominicalDiurno' },
+    { re: new RegExp(`dominical\\s+nocturno[^0-9\\n]*${N}`, 'g'), key: 'dominicalNocturno' },
+    { re: new RegExp(`festivo\\s+diurno[^0-9\\n]*${N}`, 'g'), key: 'dominicalDiurno' },
+    { re: new RegExp(`festivo\\s+nocturno[^0-9\\n]*${N}`, 'g'), key: 'dominicalNocturno' },
+    { re: new RegExp(`extra\\s+dominical\\s+diurna?[^0-9\\n]*${N}`, 'g'), key: 'extraDominicalDiurno' },
     { re: new RegExp(`extra\\s+dominical\\s+nocturna?[^0-9\\n]*${N}`, 'g'), key: 'extraDominicalNocturno' },
     // variantes: "hora dominical diurna/nocturna", "trabajo dominical/festivo"
-    { re: new RegExp(`hora\\s+dominical\\s+diurna?[^0-9\\n]*${N}`, 'g'),    key: 'dominicalDiurno' },
-    { re: new RegExp(`hora\\s+dominical\\s+nocturna?[^0-9\\n]*${N}`, 'g'),  key: 'dominicalNocturno' },
-    { re: new RegExp(`trabajo\\s+(?:dominical|festivo)[^0-9\\n]*${N}`, 'g'),key: 'dominicalDiurno' },
+    { re: new RegExp(`hora\\s+dominical\\s+diurna?[^0-9\\n]*${N}`, 'g'), key: 'dominicalDiurno' },
+    { re: new RegExp(`hora\\s+dominical\\s+nocturna?[^0-9\\n]*${N}`, 'g'), key: 'dominicalNocturno' },
+    { re: new RegExp(`trabajo\\s+(?:dominical|festivo)[^0-9\\n]*${N}`, 'g'), key: 'dominicalDiurno' },
     // variantes coloquiales: "horas extras diurnas", "extras diurnas"
-    { re: new RegExp(`horas?\\s+extras?\\s+diurnas?[^0-9\\n]*${N}`, 'g'),   key: 'extraDiurna' },
+    { re: new RegExp(`horas?\\s+extras?\\s+diurnas?[^0-9\\n]*${N}`, 'g'), key: 'extraDiurna' },
     { re: new RegExp(`horas?\\s+extras?\\s+nocturnas?[^0-9\\n]*${N}`, 'g'), key: 'extraNocturna' },
-    { re: new RegExp(`extras?\\s+diurnas?[^0-9\\n]*${N}`, 'g'),             key: 'extraDiurna' },
-    { re: new RegExp(`extras?\\s+nocturnas?[^0-9\\n]*${N}`, 'g'),           key: 'extraNocturna' },
+    { re: new RegExp(`extras?\\s+diurnas?[^0-9\\n]*${N}`, 'g'), key: 'extraDiurna' },
+    { re: new RegExp(`extras?\\s+nocturnas?[^0-9\\n]*${N}`, 'g'), key: 'extraNocturna' },
 
     // ── Abreviaturas estándar (con espacio antes del número) ───────
-    { re: /\bhed\b[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraDiurna' },
-    { re: /\bhen\b[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraNocturna' },
-    { re: /\brn\b[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'recargoNocturno' },
-    { re: /\bdd\b[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'dominicalDiurno' },
-    { re: /\bdn\b[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'dominicalNocturno' },
+    { re: /\bhed\b[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraDiurna' },
+    { re: /\bhen\b[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraNocturna' },
+    { re: /\brn\b[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/gi, key: 'recargoNocturno' },
+    { re: /\bdd\b[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/gi, key: 'dominicalDiurno' },
+    { re: /\bdn\b[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/gi, key: 'dominicalNocturno' },
     { re: /\bhedd\b[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraDominicalDiurno' },
     { re: /\bhedn\b[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraDominicalNocturno' },
 
     // ── Abreviaturas pegadas al número: HED2.5, HEN1,5 ───────────
-    { re: /\bhed([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraDiurna' },
-    { re: /\bhen([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraNocturna' },
-    { re: /\brn([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'recargoNocturno' },
+    { re: /\bhed([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraDiurna' },
+    { re: /\bhen([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraNocturna' },
+    { re: /\brn([0-9]+(?:[.,][0-9]+)?)/gi, key: 'recargoNocturno' },
     { re: /\bhedd([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraDominicalDiurno' },
     { re: /\bhedn([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraDominicalNocturno' },
 
     // ── Formato tabla invertida: número → etiqueta ────────────────
     // ej. "2.5  hora extra diurna" o "1,0  HED"
-    { re: new RegExp(`${N}[ \\t]+(?:hora[ \\t]+)?extra[ \\t]+diurna`, 'g'),          key: 'extraDiurna' },
-    { re: new RegExp(`${N}[ \\t]+(?:hora[ \\t]+)?extra[ \\t]+nocturna`, 'g'),        key: 'extraNocturna' },
-    { re: new RegExp(`${N}[ \\t]+recargo[ \\t]+nocturno`, 'g'),                   key: 'recargoNocturno' },
-    { re: new RegExp(`${N}[ \\t]+(?:hora[ \\t]+)?dominical[ \\t]+diurna?`, 'g'),     key: 'dominicalDiurno' },
-    { re: new RegExp(`${N}[ \\t]+(?:hora[ \\t]+)?dominical[ \\t]+nocturna?`, 'g'),   key: 'dominicalNocturno' },
-    { re: new RegExp(`${N}[ \\t]+hed\\b`, 'gi'),  key: 'extraDiurna' },
-    { re: new RegExp(`${N}[ \\t]+hen\\b`, 'gi'),  key: 'extraNocturna' },
+    { re: new RegExp(`${N}[ \\t]+(?:hora[ \\t]+)?extra[ \\t]+diurna`, 'g'), key: 'extraDiurna' },
+    { re: new RegExp(`${N}[ \\t]+(?:hora[ \\t]+)?extra[ \\t]+nocturna`, 'g'), key: 'extraNocturna' },
+    { re: new RegExp(`${N}[ \\t]+recargo[ \\t]+nocturno`, 'g'), key: 'recargoNocturno' },
+    { re: new RegExp(`${N}[ \\t]+(?:hora[ \\t]+)?dominical[ \\t]+diurna?`, 'g'), key: 'dominicalDiurno' },
+    { re: new RegExp(`${N}[ \\t]+(?:hora[ \\t]+)?dominical[ \\t]+nocturna?`, 'g'), key: 'dominicalNocturno' },
+    { re: new RegExp(`${N}[ \\t]+hed\\b`, 'gi'), key: 'extraDiurna' },
+    { re: new RegExp(`${N}[ \\t]+hen\\b`, 'gi'), key: 'extraNocturna' },
     { re: new RegExp(`${N}[ \\t]+hedd\\b`, 'gi'), key: 'extraDominicalDiurno' },
     { re: new RegExp(`${N}[ \\t]+hedn\\b`, 'gi'), key: 'extraDominicalNocturno' },
-    { re: new RegExp(`${N}[ \\t]+rn\\b`, 'gi'),   key: 'recargoNocturno' },
-    { re: new RegExp(`${N}[ \\t]+dd\\b`, 'gi'),   key: 'dominicalDiurno' },
-    { re: new RegExp(`${N}[ \\t]+dn\\b`, 'gi'),   key: 'dominicalNocturno' },
+    { re: new RegExp(`${N}[ \\t]+rn\\b`, 'gi'), key: 'recargoNocturno' },
+    { re: new RegExp(`${N}[ \\t]+dd\\b`, 'gi'), key: 'dominicalDiurno' },
+    { re: new RegExp(`${N}[ \\t]+dn\\b`, 'gi'), key: 'dominicalNocturno' },
   ];
 
   patterns.forEach(({ re, key }) => {
@@ -707,11 +716,11 @@ function parseHoursFromText(text) {
  * @param {string} [errorMsg]  detalle técnico opcional
  */
 function showManualFallbackPanel(reason, errorMsg = '') {
-  const panel    = document.getElementById('fallback-panel');
-  const titleEl  = document.getElementById('fallback-title');
+  const panel = document.getElementById('fallback-panel');
+  const titleEl = document.getElementById('fallback-title');
   const detailEl = document.getElementById('fallback-detail');
-  const tipsEl   = document.getElementById('fallback-tips');
-  const ctaBtn   = document.getElementById('fallback-cta-btn');
+  const tipsEl = document.getElementById('fallback-tips');
+  const ctaBtn = document.getElementById('fallback-cta-btn');
   if (!panel) return;
 
   const configs = {
@@ -762,9 +771,9 @@ function showManualFallbackPanel(reason, errorMsg = '') {
   };
 
   const cfg = configs[reason] || configs.total_fail;
-  titleEl.textContent  = cfg.t;
+  titleEl.textContent = cfg.t;
   detailEl.textContent = cfg.d;
-  tipsEl.innerHTML     = cfg.tips.map(t => `<li>${t}</li>`).join('');
+  tipsEl.innerHTML = cfg.tips.map(t => `<li>${t}</li>`).join('');
   panel.classList.remove('hidden');
 
   // CTA: scroll + highlight al card manual
@@ -795,7 +804,7 @@ function hideFallbackPanel() {
  */
 function validateSchedule() {
   const startEl = document.getElementById('schedule-start');
-  const endEl   = document.getElementById('schedule-end');
+  const endEl = document.getElementById('schedule-end');
 
   // Limpiar errores previos
   startEl?.classList.remove('input--error');
@@ -833,15 +842,15 @@ function validateSchedule() {
  */
 function getScheduleMinutes() {
   const startVal = document.getElementById('schedule-start')?.value || '07:00';
-  const endVal   = document.getElementById('schedule-end')?.value   || '17:00';
+  const endVal = document.getElementById('schedule-end')?.value || '17:00';
 
   const [sh, sm] = startVal.split(':').map(Number);
   const [eh, em] = endVal.split(':').map(Number);
 
   return {
     schedInicio: sh * 60 + sm,
-    schedFin:    eh * 60 + em,
-    workDays:    [1, 2, 3, 4, 5],  // Lunes a viernes (fijo)
+    schedFin: eh * 60 + em,
+    workDays: [1, 2, 3, 4, 5],  // Lunes a viernes (fijo)
   };
 }
 
@@ -851,12 +860,12 @@ function getScheduleMinutes() {
  */
 function fillHoursInputs(horas) {
   const map = {
-    'extra-diurna':         horas.extraDiurna,
-    'extra-nocturna':       horas.extraNocturna,
-    'extra-diurna-dom':     horas.extraDominicalDiurno,
-    'extra-nocturna-dom':   horas.extraDominicalNocturno,
-    'recargo-nocturno':     horas.recargoNocturno,
-    'recargo-dominical':    horas.dominicalDiurno,
+    'extra-diurna': horas.extraDiurna,
+    'extra-nocturna': horas.extraNocturna,
+    'extra-diurna-dom': horas.extraDominicalDiurno,
+    'extra-nocturna-dom': horas.extraDominicalNocturno,
+    'recargo-nocturno': horas.recargoNocturno,
+    'recargo-dominical': horas.dominicalDiurno,
     'recargo-nocturno-dom': horas.dominicalNocturno,
   };
   Object.entries(map).forEach(([id, val]) => {
@@ -872,13 +881,13 @@ function fillHoursInputs(horas) {
 // ── Salary input formatting ──────────────────────────
 
 function initSalaryInput() {
-  const input   = document.getElementById('salary-input');
+  const input = document.getElementById('salary-input');
   const preview = document.getElementById('hourly-preview');
-  const select  = document.getElementById('weekly-hours-select');
+  const select = document.getElementById('weekly-hours-select');
 
   function updatePreview() {
-    const salary   = parseSalary(input.value);
-    const jornada  = parseInt(select.value, 10);
+    const salary = parseSalary(input.value);
+    const jornada = parseInt(select.value, 10);
     if (salary > 0) {
       const horaOrdinaria = calcHoraOrdinaria(salary, jornada);
       preview.textContent = `Valor hora ordinaria ≈ ${formatCOP(horaOrdinaria)}`;
@@ -888,8 +897,8 @@ function initSalaryInput() {
   }
 
   input.addEventListener('input', () => {
-    const pos   = input.selectionStart;
-    const raw   = input.value;
+    const pos = input.selectionStart;
+    const raw = input.value;
     const formatted = formatSalaryInput(raw);
     input.value = formatted;
     // Reestablecer cursor
@@ -904,16 +913,16 @@ function initSalaryInput() {
 // ── Upload zone ──────────────────────────────────────
 
 function initUploadZone() {
-  const zone         = document.getElementById('upload-zone');
-  const fileInput    = document.getElementById('pdf-file-input');
-  const triggerBtn   = document.getElementById('upload-trigger');
-  const fileInfo     = document.getElementById('file-info');
-  const fileName     = document.getElementById('file-name-label');
-  const fileSize     = document.getElementById('file-size-label');
-  const removeBtn    = document.getElementById('remove-file-btn');
-  const parseStatus  = document.getElementById('parse-status');
+  const zone = document.getElementById('upload-zone');
+  const fileInput = document.getElementById('pdf-file-input');
+  const triggerBtn = document.getElementById('upload-trigger');
+  const fileInfo = document.getElementById('file-info');
+  const fileName = document.getElementById('file-name-label');
+  const fileSize = document.getElementById('file-size-label');
+  const removeBtn = document.getElementById('remove-file-btn');
+  const parseStatus = document.getElementById('parse-status');
   const progressFill = document.getElementById('progress-fill');
-  const parseMsg     = document.getElementById('parse-message');
+  const parseMsg = document.getElementById('parse-message');
 
   function formatBytes(bytes) {
     if (bytes < 1024) return bytes + ' B';
@@ -923,7 +932,7 @@ function initUploadZone() {
 
   function setProgress(pct, msg) {
     progressFill.style.width = pct + '%';
-    parseMsg.textContent     = msg;
+    parseMsg.textContent = msg;
   }
 
   async function handleFile(file) {
@@ -986,27 +995,27 @@ function initUploadZone() {
       console.log(`🖼️ ${images.length} página(s) renderizadas para visión IA`);
 
       // 3. Groq visión extrae nombre + registros → JS calcula
-      let horas        = null;
-      let nombre       = '';
-      let usedAI       = false;
+      let horas = null;
+      let nombre = '';
+      let usedAI = false;
       let groqErrorMsg = '';
-      const isScanned  = text.trim().length < 80; // poco texto → probable PDF escaneado
+      const isScanned = text.trim().length < 80; // poco texto → probable PDF escaneado
 
       // Leer jornada habitual del formulario
       const { schedInicio, schedFin, workDays } = getScheduleMinutes();
-      const hStr = m => `${Math.floor(m/60).toString().padStart(2,'0')}:${(m%60).toString().padStart(2,'0')}`;
-      const dayNames = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+      const hStr = m => `${Math.floor(m / 60).toString().padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}`;
+      const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
       console.log(`🗓️ Días laborales: ${workDays.map(d => dayNames[d]).join(', ')} | 🕐 ${hStr(schedInicio)}–${hStr(schedFin)}`);
 
       setProgress(52, 'Analizando con visión IA (texto + manuscrito)…');
       try {
         const groqResult = await extractHoursWithGroq(text, images, (pct, msg) => setProgress(pct, msg), schedInicio, schedFin, workDays);
-        const groqHoras  = groqResult?.horas;
-        nombre           = groqResult?.nombre || '';
-        const groqTotal  = groqHoras ? Object.values(groqHoras).reduce((s, v) => s + v, 0) : 0;
+        const groqHoras = groqResult?.horas;
+        nombre = groqResult?.nombre || '';
+        const groqTotal = groqHoras ? Object.values(groqHoras).reduce((s, v) => s + v, 0) : 0;
         console.log('✅ Groq visión devolvió:', groqHoras, '| Nombre:', nombre, '| Total horas:', groqTotal);
         if (groqHoras && groqTotal > 0) {
-          horas  = groqHoras;
+          horas = groqHoras;
           usedAI = true;
         } else {
           console.warn('Groq visión respondió con 0 horas.');
@@ -1084,10 +1093,10 @@ function initUploadZone() {
 // ── Results rendering ─────────────────────────────────
 
 function renderResults({ lineas, total, totalHoras, horaOrdinaria }) {
-  const emptyState    = document.getElementById('empty-state');
-  const resultsContent= document.getElementById('results-content');
-  const tbody         = document.getElementById('breakdown-tbody');
-  const grandTotal    = document.getElementById('grand-total-display');
+  const emptyState = document.getElementById('empty-state');
+  const resultsContent = document.getElementById('results-content');
+  const tbody = document.getElementById('breakdown-tbody');
+  const grandTotal = document.getElementById('grand-total-display');
 
   // Nombre del empleado (guardado por handleFile en data attribute)
   const nombre = document.getElementById('calculate-btn').dataset.nombre || '';
@@ -1099,8 +1108,8 @@ function renderResults({ lineas, total, totalHoras, horaOrdinaria }) {
 
   // Metrics
   document.getElementById('metric-hora-ordinaria').textContent = formatCOP(horaOrdinaria);
-  document.getElementById('metric-total-horas').textContent    = totalHoras.toFixed(1) + ' h';
-  document.getElementById('metric-total-pagar').textContent    = formatCOP(total);
+  document.getElementById('metric-total-horas').textContent = totalHoras.toFixed(1) + ' h';
+  document.getElementById('metric-total-pagar').textContent = formatCOP(total);
 
   // Breakdown rows
   tbody.innerHTML = '';
@@ -1148,7 +1157,7 @@ function initCalculateButton() {
     }
 
     // 2. Validar salario
-    const salary  = parseSalary(document.getElementById('salary-input').value);
+    const salary = parseSalary(document.getElementById('salary-input').value);
     const jornada = parseInt(document.getElementById('weekly-hours-select').value, 10);
 
     if (!salary || salary <= 0) {
@@ -1158,12 +1167,12 @@ function initCalculateButton() {
     }
 
     const horas = {
-      extraDiurna:            getHoursValue('extra-diurna'),
-      extraNocturna:          getHoursValue('extra-nocturna'),
-      recargoNocturno:        getHoursValue('recargo-nocturno'),
-      dominicalDiurno:        getHoursValue('recargo-dominical'),
-      dominicalNocturno:      getHoursValue('recargo-nocturno-dom'),
-      extraDominicalDiurno:   getHoursValue('extra-diurna-dom'),
+      extraDiurna: getHoursValue('extra-diurna'),
+      extraNocturna: getHoursValue('extra-nocturna'),
+      recargoNocturno: getHoursValue('recargo-nocturno'),
+      dominicalDiurno: getHoursValue('recargo-dominical'),
+      dominicalNocturno: getHoursValue('recargo-nocturno-dom'),
+      extraDominicalDiurno: getHoursValue('extra-diurna-dom'),
       extraDominicalNocturno: getHoursValue('extra-nocturna-dom'),
     };
 
@@ -1191,36 +1200,36 @@ function initExportButton() {
   const btn = document.getElementById('export-btn');
 
   btn.addEventListener('click', () => {
-    const salary     = parseSalary(document.getElementById('salary-input').value);
-    const jornada    = parseInt(document.getElementById('weekly-hours-select').value, 10);
-    const horaOrd    = calcHoraOrdinaria(salary, jornada);
+    const salary = parseSalary(document.getElementById('salary-input').value);
+    const jornada = parseInt(document.getElementById('weekly-hours-select').value, 10);
+    const horaOrd = calcHoraOrdinaria(salary, jornada);
 
-    const tbody      = document.getElementById('breakdown-tbody');
+    const tbody = document.getElementById('breakdown-tbody');
     const totalPagar = document.getElementById('metric-total-pagar').textContent;
     const totalHoras = document.getElementById('metric-total-horas').textContent;
-    const fecha      = new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+    const fecha = new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
 
-    const nombre    = document.getElementById('calculate-btn').dataset.nombre || '';
+    const nombre = document.getElementById('calculate-btn').dataset.nombre || '';
     let txt = `═══════════════════════════════════════════\n`;
-    txt     += `  LIQUIDACIÓN DE HORAS EXTRA – LABORCALC\n`;
-    txt     += `  Fecha: ${fecha}\n`;
-    txt     += `═══════════════════════════════════════════\n\n`;
+    txt += `  LIQUIDACIÓN DE HORAS EXTRA – LABORCALC\n`;
+    txt += `  Fecha: ${fecha}\n`;
+    txt += `═══════════════════════════════════════════\n\n`;
     if (nombre) {
-    txt     += `Empleado            : ${nombre}\n`;
+      txt += `Empleado            : ${nombre}\n`;
     }
-    txt     += `Salario mensual     : ${formatCOP(salary)}\n`;
-    txt     += `Jornada semanal     : ${jornada} horas\n`;
-    txt     += `Valor hora ordinaria: ${formatCOP(horaOrd)}\n\n`;
-    txt     += `───────────────────────────────────────────\n`;
-    txt     += `DESGLOSE\n`;
-    txt     += `───────────────────────────────────────────\n`;
+    txt += `Salario mensual     : ${formatCOP(salary)}\n`;
+    txt += `Jornada semanal     : ${jornada} horas\n`;
+    txt += `Valor hora ordinaria: ${formatCOP(horaOrd)}\n\n`;
+    txt += `───────────────────────────────────────────\n`;
+    txt += `DESGLOSE\n`;
+    txt += `───────────────────────────────────────────\n`;
 
     Array.from(tbody.querySelectorAll('tr')).forEach((tr) => {
       const cells = tr.querySelectorAll('td');
       if (cells.length >= 5) {
-        const tipo     = cells[0].textContent.trim();
-        const horas    = cells[1].textContent.trim();
-        const recargo  = cells[2].textContent.trim();
+        const tipo = cells[0].textContent.trim();
+        const horas = cells[1].textContent.trim();
+        const recargo = cells[2].textContent.trim();
         const unitario = cells[3].textContent.trim();
         const subtotal = cells[4].textContent.trim();
         txt += `${tipo.substring(0, 42).padEnd(42)} ${horas.padStart(6)}  ${recargo.padStart(5)}  ${unitario.padStart(14)}  ${subtotal.padStart(16)}\n`;
@@ -1235,10 +1244,10 @@ function initExportButton() {
 
     // Create download
     const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = `liquidacion_horas_extra_${new Date().toISOString().slice(0,10)}.txt`;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `liquidacion_horas_extra_${new Date().toISOString().slice(0, 10)}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
