@@ -81,9 +81,9 @@ async function runMathTests() {
       expected: { extraDiurna: 2, extraNocturna: 0, recargoNocturno: 0, dominicalDiurno: 0, dominicalNocturno: 0, extraDominicalDiurno: 0, extraDominicalNocturno: 0 }
     },
     {
-      name: 'Turno Dominical sin extra (Domingo 08:00 - 17:00)',
-      registros: [{ fecha: '07/06/2026', ingreso: '08:00', salida: '17:00' }], // 7 de junio 2026 es domingo
-      expected: { extraDiurna: 0, extraNocturna: 0, recargoNocturno: 0, dominicalDiurno: 9, dominicalNocturno: 0, extraDominicalDiurno: 0, extraDominicalNocturno: 0 }
+      name: 'Turno Dominical (Día de descanso, Domingo 08:00 - 17:00)',
+      registros: [{ fecha: '07/06/2026', ingreso: '08:00', salida: '17:00' }], // 7 de junio 2026 es domingo (día de descanso)
+      expected: { extraDiurna: 0, extraNocturna: 0, recargoNocturno: 0, dominicalDiurno: 0, dominicalNocturno: 0, extraDominicalDiurno: 9, extraDominicalNocturno: 0 }
     },
     {
       name: 'Festivo nocturno (01/05/2026 Día del Trabajo, Viernes, 19:00 - 04:00)',

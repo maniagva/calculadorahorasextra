@@ -428,7 +428,7 @@ function inter(a, b, c, d) {
  * @param {number} schedFin    minutos desde medianoche (ej. 1020 = 17:00)
  * @param {number[]} workDays  días laborales (0=Dom…6=Sáb). El resto son días de descanso.
  */
-async function calcularDesdeRegistros(registros, schedInicio = 480, schedFin = 1020, workDays = [1,2,3,4,5]) {
+async function calcularDesdeRegistros(registros, schedInicio = 420, schedFin = 1020, workDays = [1,2,3,4,5]) {
   // Pre-cargar festivos de cada año presente en los registros (API + cache)
   const festivosPorAnio = await precargarFestivos(registros);
 
@@ -446,7 +446,9 @@ async function calcularDesdeRegistros(registros, schedInicio = 480, schedFin = 1
     const [dd, mm, yyyy] = reg.fecha.split('/').map(Number);
     const fecha   = new Date(yyyy, mm - 1, dd);
     const festivosAnio = festivosPorAnio.get(yyyy) || new Set();
-    const esDesc = festivosAnio.has(reg.fecha) || !workDays.includes(fecha.getDay());
+    
+    const esDescanso = !workDays.includes(fecha.getDay());
+    const esDominicalOFestivo = festivosAnio.has(reg.fecha) || fecha.getDay() === 0;
 
     let ini = toMin(reg.ingreso);
     let fin = toMin(reg.salida);
@@ -455,26 +457,27 @@ async function calcularDesdeRegistros(registros, schedInicio = 480, schedFin = 1
     const duracion = fin - ini;
 
     /*
-     * Cálculo de intersecciones (maneja cruce de medianoche con offset DIA):
-     *   inS  = minutos dentro del horario laboral habitual
-     *   inD  = minutos dentro del horario diurno (6AM-7PM)
-     *   inSD = minutos dentro del horario laboral Y diurno (intersección triple)
+     * Cálculo de intersecciones.
+     * Si es el día de descanso del empleado, NO tiene horario laboral habitual ese día.
+     * Por lo tanto, todas las horas son extra.
      */
-    const inS =
-      inter(ini, fin, schedInicio,       schedFin) +
-      inter(ini, fin, schedInicio + DIA, schedFin + DIA);
+    let inS = 0;
+    let inSD = 0;
 
-    const inD =
-      inter(ini, fin, D_I,       D_F) +
-      inter(ini, fin, D_I + DIA, D_F + DIA);
+    if (!esDescanso) {
+      inS = inter(ini, fin, schedInicio, schedFin) + 
+            inter(ini, fin, schedInicio + DIA, schedFin + DIA);
 
-    // Intersección del horario habitual con el horario diurno
-    const sdI = Math.max(schedInicio, D_I);
-    const sdF = Math.min(schedFin,    D_F);
-    const inSD = (sdI < sdF)
-      ? inter(ini, fin, sdI,       sdF) +
-        inter(ini, fin, sdI + DIA, sdF + DIA)
-      : 0;
+      const sdI = Math.max(schedInicio, D_I);
+      const sdF = Math.min(schedFin, D_F);
+      if (sdI < sdF) {
+        inSD = inter(ini, fin, sdI, sdF) + 
+               inter(ini, fin, sdI + DIA, sdF + DIA);
+      }
+    }
+
+    const inD = inter(ini, fin, D_I, D_F) + 
+                inter(ini, fin, D_I + DIA, D_F + DIA);
 
     /*
      * Los 4 cuadrantes (en minutos):
@@ -488,14 +491,14 @@ async function calcularDesdeRegistros(registros, schedInicio = 480, schedFin = 1
     const extDay   = inD - inSD;
     const extNight = duracion - inS - inD + inSD;
 
-    if (esDesc) {
+    if (esDominicalOFestivo) {
       // Domingo/festivo: las horas ordinarias también se pagan con recargo
       acc.dominicalDiurno        += regDay   / 60;
       acc.dominicalNocturno      += regNight / 60;
       acc.extraDominicalDiurno   += extDay   / 60;
       acc.extraDominicalNocturno += extNight / 60;
     } else {
-      // Semana: las horas ordinarias diurnas no generan recargo
+      // Semana (Lunes a Sábado no festivos)
       acc.recargoNocturno += regNight / 60;
       acc.extraDiurna     += extDay   / 60;
       acc.extraNocturna   += extNight / 60;
@@ -829,7 +832,7 @@ function validateSchedule() {
  * Sábado (6), domingo (0) y festivos se tratan como días de descanso.
  */
 function getScheduleMinutes() {
-  const startVal = document.getElementById('schedule-start')?.value || '08:00';
+  const startVal = document.getElementById('schedule-start')?.value || '07:00';
   const endVal   = document.getElementById('schedule-end')?.value   || '17:00';
 
   const [sh, sm] = startVal.split(':').map(Number);
