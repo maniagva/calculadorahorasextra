@@ -814,6 +814,19 @@ body {
   color-scheme: dark;
 }
 
+/* Estado de error en inputs de horario */
+.input--error {
+  border-color: var(--color-error, #ff6b6b) !important;
+  box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.18) !important;
+  animation: shakeInput 0.35s ease;
+}
+
+@keyframes shakeInput {
+  0%, 100% { transform: translateX(0); }
+  25%       { transform: translateX(-5px); }
+  75%       { transform: translateX(5px); }
+}
+
 .schedule-hint {
   font-size: 0.72rem;
   color: var(--color-text-dim);

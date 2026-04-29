@@ -592,6 +592,50 @@ function parseHoursFromText(text) {
 
 
 /**
+ * Valida que los inputs de horario habitual sean coherentes.
+ * Marca visualmente los inputs incorrectos con la clase input--error.
+ *
+ * Reglas:
+ *  - Ambos campos deben tener valor
+ *  - schedInicio < schedFin
+ *  - Diferencia mínima de 1 hora
+ *
+ * @returns {{ ok: boolean, msg: string }}
+ */
+function validateSchedule() {
+  const startEl = document.getElementById('schedule-start');
+  const endEl   = document.getElementById('schedule-end');
+
+  // Limpiar errores previos
+  startEl?.classList.remove('input--error');
+  endEl?.classList.remove('input--error');
+
+  const { schedInicio, schedFin } = getScheduleMinutes();
+
+  if (!startEl?.value || !endEl?.value) {
+    startEl?.classList.add('input--error');
+    endEl?.classList.add('input--error');
+    return { ok: false, msg: 'Completa los campos de inicio y fin de jornada habitual.' };
+  }
+
+  if (schedInicio >= schedFin) {
+    startEl?.classList.add('input--error');
+    endEl?.classList.add('input--error');
+    return {
+      ok: false,
+      msg: `La hora de inicio (${startEl.value}) debe ser anterior al fin (${endEl.value}).`,
+    };
+  }
+
+  if (schedFin - schedInicio < 60) {
+    endEl?.classList.add('input--error');
+    return { ok: false, msg: 'La jornada habitual debe durar al menos 1 hora.' };
+  }
+
+  return { ok: true, msg: '' };
+}
+
+/**
  * Lee los inputs de jornada y devuelve {schedInicio, schedFin, workDays}.
  * workDays está fijo como lunes a viernes [1,2,3,4,5].
  * Sábado (6), domingo (0) y festivos se tratan como días de descanso.
@@ -715,6 +759,14 @@ function initUploadZone() {
 
     if (!isRealPDF) {
       showToast('El archivo no es un PDF válido (firma %PDF- no encontrada).', 'error');
+      return;
+    }
+
+    // Validar horario antes de procesar el PDF
+    const schedVal = validateSchedule();
+    if (!schedVal.ok) {
+      showToast('⏰ ' + schedVal.msg, 'error');
+      document.getElementById('card-salary')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
 
@@ -883,6 +935,15 @@ function initCalculateButton() {
   const btn = document.getElementById('calculate-btn');
 
   btn.addEventListener('click', () => {
+    // 1. Validar horario laboral
+    const schedVal = validateSchedule();
+    if (!schedVal.ok) {
+      showToast('⏰ ' + schedVal.msg, 'error');
+      document.getElementById('card-salary')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
+    // 2. Validar salario
     const salary  = parseSalary(document.getElementById('salary-input').value);
     const jornada = parseInt(document.getElementById('weekly-hours-select').value, 10);
 
@@ -995,4 +1056,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Auto-compute preview on jornada change
   document.getElementById('weekly-hours-select').dispatchEvent(new Event('change'));
+
+  // Limpiar error visual de horario cuando el usuario corrige los inputs
+  ['schedule-start', 'schedule-end'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', () => {
+      document.getElementById('schedule-start')?.classList.remove('input--error');
+      document.getElementById('schedule-end')?.classList.remove('input--error');
+    });
+  });
 });
