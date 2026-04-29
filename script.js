@@ -508,21 +508,38 @@ Reglas:
  */
 function parseHoursFromText(text) {
   const t = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  const acc = { extraDiurna:0, extraNocturna:0, recargoNocturno:0,
-                dominicalDiurno:0, dominicalNocturno:0,
-                extraDominicalDiurno:0, extraDominicalNocturno:0 };
+  const acc = {
+    extraDiurna: 0, extraNocturna: 0, recargoNocturno: 0,
+    dominicalDiurno: 0, dominicalNocturno: 0,
+    extraDominicalDiurno: 0, extraDominicalNocturno: 0,
+  };
   let found = false;
 
+  const N = '([0-9]+(?:[.,][0-9]+)?)'; // grupo numérico reutilizable
+
   const patterns = [
-    { re: /hora\s+extra\s+diurna[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,         key: 'extraDiurna' },
-    { re: /hora\s+extra\s+nocturna[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,       key: 'extraNocturna' },
-    { re: /recargo\s+nocturno[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,            key: 'recargoNocturno' },
-    { re: /dominical\s+diurno[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,            key: 'dominicalDiurno' },
-    { re: /dominical\s+nocturno[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,          key: 'dominicalNocturno' },
-    { re: /festivo\s+diurno[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,              key: 'dominicalDiurno' },
-    { re: /festivo\s+nocturno[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,            key: 'dominicalNocturno' },
-    { re: /extra\s+dominical\s+diurna?[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g,   key: 'extraDominicalDiurno' },
-    { re: /extra\s+dominical\s+nocturna?[^0-9\n]*([0-9]+(?:[.,][0-9]+)?)/g, key: 'extraDominicalNocturno' },
+    // ── Nombres completos (etiqueta → número) ─────────────────────
+    { re: new RegExp(`hora\\s+extra\\s+diurna[^0-9\\n]*${N}`, 'g'),         key: 'extraDiurna' },
+    { re: new RegExp(`hora\\s+extra\\s+nocturna[^0-9\\n]*${N}`, 'g'),       key: 'extraNocturna' },
+    { re: new RegExp(`recargo\\s+nocturno[^0-9\\n]*${N}`, 'g'),             key: 'recargoNocturno' },
+    { re: new RegExp(`nocturno\\s+ordinario[^0-9\\n]*${N}`, 'g'),           key: 'recargoNocturno' },
+    { re: new RegExp(`dominical\\s+diurno[^0-9\\n]*${N}`, 'g'),             key: 'dominicalDiurno' },
+    { re: new RegExp(`dominical\\s+nocturno[^0-9\\n]*${N}`, 'g'),           key: 'dominicalNocturno' },
+    { re: new RegExp(`festivo\\s+diurno[^0-9\\n]*${N}`, 'g'),               key: 'dominicalDiurno' },
+    { re: new RegExp(`festivo\\s+nocturno[^0-9\\n]*${N}`, 'g'),             key: 'dominicalNocturno' },
+    { re: new RegExp(`extra\\s+dominical\\s+diurna?[^0-9\\n]*${N}`, 'g'),   key: 'extraDominicalDiurno' },
+    { re: new RegExp(`extra\\s+dominical\\s+nocturna?[^0-9\\n]*${N}`, 'g'), key: 'extraDominicalNocturno' },
+    // variantes: "hora dominical diurna/nocturna", "trabajo dominical/festivo"
+    { re: new RegExp(`hora\\s+dominical\\s+diurna?[^0-9\\n]*${N}`, 'g'),    key: 'dominicalDiurno' },
+    { re: new RegExp(`hora\\s+dominical\\s+nocturna?[^0-9\\n]*${N}`, 'g'),  key: 'dominicalNocturno' },
+    { re: new RegExp(`trabajo\\s+(?:dominical|festivo)[^0-9\\n]*${N}`, 'g'),key: 'dominicalDiurno' },
+    // variantes coloquiales: "horas extras diurnas", "extras diurnas"
+    { re: new RegExp(`horas?\\s+extras?\\s+diurnas?[^0-9\\n]*${N}`, 'g'),   key: 'extraDiurna' },
+    { re: new RegExp(`horas?\\s+extras?\\s+nocturnas?[^0-9\\n]*${N}`, 'g'), key: 'extraNocturna' },
+    { re: new RegExp(`extras?\\s+diurnas?[^0-9\\n]*${N}`, 'g'),             key: 'extraDiurna' },
+    { re: new RegExp(`extras?\\s+nocturnas?[^0-9\\n]*${N}`, 'g'),           key: 'extraNocturna' },
+
+    // ── Abreviaturas estándar (con espacio antes del número) ───────
     { re: /\bhed\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraDiurna' },
     { re: /\bhen\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraNocturna' },
     { re: /\brn\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'recargoNocturno' },
@@ -530,18 +547,49 @@ function parseHoursFromText(text) {
     { re: /\bdn\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'dominicalNocturno' },
     { re: /\bhedd\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraDominicalDiurno' },
     { re: /\bhedn\b[^0-9]*([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraDominicalNocturno' },
+
+    // ── Abreviaturas pegadas al número: HED2.5, HEN1,5 ───────────
+    { re: /\bhed([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraDiurna' },
+    { re: /\bhen([0-9]+(?:[.,][0-9]+)?)/gi,  key: 'extraNocturna' },
+    { re: /\brn([0-9]+(?:[.,][0-9]+)?)/gi,   key: 'recargoNocturno' },
+    { re: /\bhedd([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraDominicalDiurno' },
+    { re: /\bhedn([0-9]+(?:[.,][0-9]+)?)/gi, key: 'extraDominicalNocturno' },
+
+    // ── Formato tabla invertida: número → etiqueta ────────────────
+    // ej. "2.5  hora extra diurna" o "1,0  HED"
+    { re: new RegExp(`${N}\\s+(?:hora\\s+)?extra\\s+diurna`, 'g'),          key: 'extraDiurna' },
+    { re: new RegExp(`${N}\\s+(?:hora\\s+)?extra\\s+nocturna`, 'g'),        key: 'extraNocturna' },
+    { re: new RegExp(`${N}\\s+recargo\\s+nocturno`, 'g'),                   key: 'recargoNocturno' },
+    { re: new RegExp(`${N}\\s+(?:hora\\s+)?dominical\\s+diurna?`, 'g'),     key: 'dominicalDiurno' },
+    { re: new RegExp(`${N}\\s+(?:hora\\s+)?dominical\\s+nocturna?`, 'g'),   key: 'dominicalNocturno' },
+    { re: new RegExp(`${N}\\s+hed\\b`, 'gi'),  key: 'extraDiurna' },
+    { re: new RegExp(`${N}\\s+hen\\b`, 'gi'),  key: 'extraNocturna' },
+    { re: new RegExp(`${N}\\s+hedd\\b`, 'gi'), key: 'extraDominicalDiurno' },
+    { re: new RegExp(`${N}\\s+hedn\\b`, 'gi'), key: 'extraDominicalNocturno' },
+    { re: new RegExp(`${N}\\s+rn\\b`, 'gi'),   key: 'recargoNocturno' },
+    { re: new RegExp(`${N}\\s+dd\\b`, 'gi'),   key: 'dominicalDiurno' },
+    { re: new RegExp(`${N}\\s+dn\\b`, 'gi'),   key: 'dominicalNocturno' },
   ];
 
   patterns.forEach(({ re, key }) => {
+    re.lastIndex = 0; // resetear estado del regex global
     let match;
     while ((match = re.exec(t)) !== null) {
-      const val = parseFloat(match[1].replace(',', '.'));
-      if (!isNaN(val)) { acc[key] += val; found = true; }
+      // match[1] existe en la mayoría; para patrones invertidos puede ser match[1] directamente
+      const raw = match[1] ?? match[0].match(/[0-9]+(?:[.,][0-9]+)?/)?.[0];
+      const val = parseFloat((raw ?? '').replace(',', '.'));
+      if (!isNaN(val) && val > 0 && val < 300) { // sanity cap: ignora valores absurdos
+        acc[key] += val;
+        found = true;
+      }
     }
   });
 
+  // Redondear a 2 decimales para evitar basura de punto flotante
+  Object.keys(acc).forEach(k => { acc[k] = Math.round(acc[k] * 100) / 100; });
   return found ? acc : null;
 }
+
 
 /**
  * Lee los inputs de jornada y devuelve {schedInicio, schedFin, workDays}.
