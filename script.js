@@ -488,8 +488,10 @@ async function calcularDesdeRegistros(registros, schedInicio = 420, schedFin = 1
     const fecha = new Date(yyyy, mm - 1, dd);
     const festivosAnio = festivosPorAnio.get(yyyy) || new Set();
 
-    const esDescanso = !workDays.includes(fecha.getDay());
     const esDominicalOFestivo = festivosAnio.has(reg.fecha) || fecha.getDay() === 0;
+    // Si no está en los días laborales (Sábado/Domingo) o si es Festivo (ej. lunes festivo),
+    // el día entero se considera descanso y TODO el tiempo trabajado será Hora Extra.
+    const esDescanso = !workDays.includes(fecha.getDay()) || festivosAnio.has(reg.fecha);
 
     let ini = toMin(reg.ingreso);
     let fin = toMin(reg.salida);
@@ -907,7 +909,6 @@ function validateSchedule() {
 function getScheduleMinutes() {
   const startVal = document.getElementById('schedule-start')?.value || '07:00';
   const endVal = document.getElementById('schedule-end')?.value || '17:00';
-  const worksSaturdays = document.getElementById('work-saturdays')?.checked;
 
   const [sh, sm] = startVal.split(':').map(Number);
   const [eh, em] = endVal.split(':').map(Number);
@@ -915,7 +916,7 @@ function getScheduleMinutes() {
   return {
     schedInicio: sh * 60 + sm,
     schedFin: eh * 60 + em,
-    workDays: worksSaturdays ? [1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5],
+    workDays: [1, 2, 3, 4, 5],  // Lunes a viernes (fijo)
   };
 }
 
