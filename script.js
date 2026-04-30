@@ -1401,7 +1401,8 @@ async function processReviewedData() {
 
   // Ocultar tabla y mostrar cargando de nuevo
   document.getElementById('review-container').classList.add('hidden');
-  setProgress(90, 'Calculando horas validadas...');
+  document.getElementById('progress-fill').style.width = '90%';
+  document.getElementById('parse-message').textContent = 'Calculando horas validadas...';
   document.getElementById('parse-status').classList.remove('hidden');
 
   const { schedInicio, schedFin, workDays } = getScheduleMinutes();
@@ -1410,7 +1411,9 @@ async function processReviewedData() {
     const horas = await calcularDesdeRegistros(registros, schedInicio, schedFin, workDays);
     const total = Object.values(horas).reduce((s, v) => s + v, 0);
 
-    setProgress(100, '¡Listo!');
+    document.getElementById('progress-fill').style.width = '100%';
+    document.getElementById('parse-message').textContent = '¡Listo!';
+    
     setTimeout(() => {
       document.getElementById('parse-status').classList.add('hidden');
       fillHoursInputs(horas);
