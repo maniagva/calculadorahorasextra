@@ -1,4 +1,6 @@
-<!DOCTYPE html>
+const fs = require('fs');
+
+const html = `<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -400,4 +402,6 @@
 
 </body>
 
-</html>
+</html>`;
+
+fs.writeFileSync('index.html', html, 'utf-8');
