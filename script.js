@@ -610,6 +610,25 @@ REGLAS DE FECHAS:
 
   if (!Array.isArray(registros) || registros.length === 0) return { horas: null, nombre };
 
+  // Normalización robusta para corregir posibles alucinaciones o formato literal de la IA
+  registros.forEach(reg => {
+    if (reg.fecha) {
+      // 1. Normalizar guiones a barras
+      reg.fecha = reg.fecha.replace(/-/g, '/');
+      
+      const parts = reg.fecha.split('/');
+      if (parts.length === 3) {
+        let y = parseInt(parts[2], 10);
+        // 2. Corregir años de 2 dígitos (ej. "26" -> 2026)
+        if (y < 100) {
+          y += 2000;
+          parts[2] = y.toString();
+          reg.fecha = parts.join('/');
+        }
+      }
+    }
+  });
+
   // Pasar el horario laboral y los días de descanso para clasificar correctamente
   return { horas: await calcularDesdeRegistros(registros, schedInicio, schedFin, workDays), nombre };
 }
