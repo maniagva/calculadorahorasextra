@@ -145,6 +145,32 @@
         </div>
       </div>
 
+      <!-- Tabla de Revisión (Nivel 2) -->
+      <div class="review-container hidden" id="review-container">
+        <div class="review-header">
+          <h3>Revisa los datos extraídos</h3>
+          <p>Corrige cualquier error de lectura antes de calcular.</p>
+        </div>
+        <div class="review-table-wrapper">
+          <table class="review-table" id="review-table">
+            <thead>
+              <tr>
+                <th>Fecha (DD/MM/AAAA)</th>
+                <th>Ingreso</th>
+                <th>Salida</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="review-tbody">
+              <!-- Filas dinámicas -->
+            </tbody>
+          </table>
+        </div>
+        <div class="review-actions">
+          <button class="btn btn-outline" id="review-add-row">+ Añadir fila</button>
+          <button class="btn btn-primary" id="review-confirm">Confirmar y Calcular</button>
+        </div>
+      </div>
 
         <!-- Panel de guia contextual cuando la IA no puede procesar el archivo -->
         <div class="fallback-panel hidden" id="fallback-panel" role="alert">

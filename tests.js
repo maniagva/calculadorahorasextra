@@ -5,7 +5,7 @@ global.document = {
 };
 global.window = {};
 
-const { parseHoursFromText, calcularDesdeRegistros } = require('./script.js');
+const { parseHoursFromText, calcularDesdeRegistros, sanitizeTime } = require('./script.js');
 
 // Mock localStorage if missing (for fetchFestivos)
 if (typeof global.localStorage === 'undefined') {
@@ -92,12 +92,41 @@ async function runMathTests() {
     }
   ];
 
+  const initialMathPass = testsPassed;
   for (const t of mathTests) {
     const res = await calcularDesdeRegistros(t.registros, 480, 1020, [1, 2, 3, 4, 5]); // 08:00 a 17:00
     assertEqual(t.name, res, t.expected);
   }
 
-  console.log(`\n=== RESULTADOS: ${testsPassed} Pasaron, ${testsFailed} Fallaron ===\n`);
+  console.log(`\n=== RESULTADOS CÁLCULO: ${testsPassed - initialMathPass} Pasaron ===\n`);
 }
 
-runMathTests();
+// ── 3. Pruebas de sanitizeTime (Data Sanitization) ───────────────
+function runSanitizeTests() {
+  console.log('\n--- Testeando sanitizeTime (Nivel 1) ---');
+  const sanitizeTests = [
+    { input: "07:00", expected: "07:00" },
+    { input: "7:00", expected: "07:00" },
+    { input: "07-00", expected: "07:00" },
+    { input: "17.30", expected: "17:30" },
+    { input: "07:00 AM", expected: "07:00" },
+    { input: "05:00 PM", expected: "17:00" },
+    { input: "1700", expected: "17:00" },
+    { input: "25:00", expected: "23:00" }, // sanity limit
+    { input: "basura", expected: "" }
+  ];
+
+  const initialPass = testsPassed;
+  for (const t of sanitizeTests) {
+    assertEqual(`Limpiando "${t.input}"`, sanitizeTime(t.input), t.expected);
+  }
+  console.log(`\n=== RESULTADOS SANEAMIENTO: ${testsPassed - initialPass} Pasaron ===\n`);
+  console.log(`=== TOTAL GLOBAL: ${testsPassed} Pasaron, ${testsFailed} Fallaron ===\n`);
+}
+
+async function runAll() {
+  await runMathTests();
+  runSanitizeTests();
+}
+
+runAll();

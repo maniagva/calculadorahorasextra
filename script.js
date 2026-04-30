@@ -377,6 +377,47 @@ async function fetchFestivos(year) {
 }
 
 /**
+ * Sanea y corrige errores comunes de formato en las horas devueltas por el OCR.
+ * Ejemplo: "07-00" -> "07:00", "07:00 AM" -> "07:00", "25:00" -> limpia/acota.
+ * @param {string} t 
+ * @returns {string} HH:MM
+ */
+function sanitizeTime(t) {
+  if (!t) return '';
+  t = t.toUpperCase().replace(/\s+/g, '');
+  
+  // Si usó guión o punto, cambiar a dos puntos
+  t = t.replace(/[-.]/g, ':');
+  
+  // Extraer posibles AM/PM
+  const isPM = t.includes('PM');
+  const isAM = t.includes('AM');
+  t = t.replace(/[A-Z]/g, ''); // Quitar letras (AM/PM)
+  
+  let [h, m] = t.split(':');
+  if (!m && t.length === 4 && !t.includes(':')) {
+     // Formato militar "0700" o "1700"
+     h = t.slice(0, 2);
+     m = t.slice(2, 4);
+  } else if (!m) {
+     m = '00';
+  }
+  
+  let hNum = parseInt(h, 10);
+  let mNum = parseInt(m, 10);
+  
+  if (isNaN(hNum) || isNaN(mNum)) return '';
+  
+  if (isPM && hNum < 12) hNum += 12;
+  if (isAM && hNum === 12) hNum = 0;
+  
+  if (hNum > 23) hNum = 23; // sanity check simple
+  if (mNum > 59) mNum = 59;
+  
+  return `${hNum.toString().padStart(2, '0')}:${mNum.toString().padStart(2, '0')}`;
+}
+
+/**
  * Pre-carga los festivos de todos los años presentes en los registros.
  * Retorna un Map { year → Set<'DD/MM/YYYY'> } para consulta O(1).
  *
@@ -626,11 +667,15 @@ REGLAS DE FECHAS:
           reg.fecha = parts.join('/');
         }
       }
+      // 3. Limpiar horas
+      if (reg.ingreso) reg.ingreso = sanitizeTime(reg.ingreso);
+      if (reg.salida) reg.salida = sanitizeTime(reg.salida);
     }
   });
 
-  // Pasar el horario laboral y los días de descanso para clasificar correctamente
-  return { horas: await calcularDesdeRegistros(registros, schedInicio, schedFin, workDays), nombre };
+  // Level 2: Interceptar el flujo aquí en lugar de calcular
+  // return { horas: await calcularDesdeRegistros(registros, schedInicio, schedFin, workDays), nombre };
+  return { registros, nombre };
 }
 
 /**
@@ -989,8 +1034,9 @@ function initUploadZone() {
       return;
     }
 
-    // Ocultar panel de error anterior al procesar nuevo archivo
+    // Ocultar panel de error y tabla de revisión anterior al procesar nuevo archivo
     hideFallbackPanel();
+    document.getElementById('review-container')?.classList.add('hidden');
 
     fileName.textContent = file.name;
     fileSize.textContent = formatBytes(file.size);
@@ -1029,15 +1075,17 @@ function initUploadZone() {
       setProgress(52, 'Analizando con visión IA (texto + manuscrito)…');
       try {
         const groqResult = await extractHoursWithGroq(text, images, (pct, msg) => setProgress(pct, msg), schedInicio, schedFin, workDays);
-        const groqHoras = groqResult?.horas;
+        const groqRegistros = groqResult?.registros;
         nombre = groqResult?.nombre || '';
-        const groqTotal = groqHoras ? Object.values(groqHoras).reduce((s, v) => s + v, 0) : 0;
-        console.log('✅ Groq visión devolvió:', groqHoras, '| Nombre:', nombre, '| Total horas:', groqTotal);
-        if (groqHoras && groqTotal > 0) {
-          horas = groqHoras;
-          usedAI = true;
+        
+        console.log('✅ Groq visión devolvió registros:', groqRegistros, '| Nombre:', nombre);
+        
+        if (groqRegistros && groqRegistros.length > 0) {
+          setProgress(100, 'Esperando revisión del usuario...');
+          renderReviewTable(groqRegistros, nombre);
+          return; // Detiene la ejecución aquí. El flujo continuará cuando el usuario haga clic en Confirmar en la tabla.
         } else {
-          console.warn('Groq visión respondió con 0 horas.');
+          console.warn('Groq visión respondió con 0 registros válidos.');
         }
       } catch (groqErr) {
         groqErrorMsg = groqErr.message;
@@ -1280,11 +1328,119 @@ function initExportButton() {
    8. BOOTSTRAP
    ══════════════════════════════════════════════════════ */
 
+/* ══════════════════════════════════════════════════════
+   NIVEL 2: TABLA DE REVISIÓN VISUAL (Human-in-the-loop)
+   ══════════════════════════════════════════════════════ */
+
+let pendingRegistros = [];
+let pendingNombre = '';
+
+function renderReviewTable(registros, nombre) {
+  pendingRegistros = registros;
+  pendingNombre = nombre;
+
+  const tbody = document.getElementById('review-tbody');
+  tbody.innerHTML = '';
+
+  registros.forEach((reg, index) => {
+    tbody.insertAdjacentHTML('beforeend', createReviewRow(reg, index));
+  });
+
+  document.getElementById('parse-status').classList.add('hidden');
+  document.getElementById('review-container').classList.remove('hidden');
+  document.getElementById('review-container').scrollIntoView({ behavior: 'smooth' });
+}
+
+function createReviewRow(reg, index) {
+  return `
+    <tr data-index="${index}">
+      <td><input type="text" class="review-input review-input--date" value="${reg.fecha || ''}" placeholder="DD/MM/AAAA"></td>
+      <td><input type="text" class="review-input review-input--time" value="${reg.ingreso || ''}" placeholder="HH:MM"></td>
+      <td><input type="text" class="review-input review-input--time" value="${reg.salida || ''}" placeholder="HH:MM"></td>
+      <td>
+        <button class="btn-remove-row" onclick="removeReviewRow(this)" aria-label="Eliminar fila" title="Eliminar fila">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
+      </td>
+    </tr>
+  `;
+}
+
+function removeReviewRow(btn) {
+  btn.closest('tr').remove();
+}
+
+async function processReviewedData() {
+  const tbody = document.getElementById('review-tbody');
+  const rows = tbody.querySelectorAll('tr');
+  const registros = [];
+
+  rows.forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const fecha = inputs[0].value.trim();
+    const ingreso = inputs[1].value.trim();
+    const salida = inputs[2].value.trim();
+
+    if (fecha && ingreso && salida) {
+      // Aplicar el saneamiento de Nivel 1 a los datos editados por el usuario
+      registros.push({
+        fecha: fecha, // idealmente haríamos un regex replace para guiones
+        ingreso: sanitizeTime(ingreso),
+        salida: sanitizeTime(salida)
+      });
+    }
+  });
+
+  if (registros.length === 0) {
+    showToast('La tabla está vacía. Añade al menos un registro.', 'error');
+    return;
+  }
+
+  // Ocultar tabla y mostrar cargando de nuevo
+  document.getElementById('review-container').classList.add('hidden');
+  setProgress(90, 'Calculando horas validadas...');
+  document.getElementById('parse-status').classList.remove('hidden');
+
+  const { schedInicio, schedFin, workDays } = getScheduleMinutes();
+  
+  try {
+    const horas = await calcularDesdeRegistros(registros, schedInicio, schedFin, workDays);
+    const total = Object.values(horas).reduce((s, v) => s + v, 0);
+
+    setProgress(100, '¡Listo!');
+    setTimeout(() => {
+      document.getElementById('parse-status').classList.add('hidden');
+      fillHoursInputs(horas);
+      document.getElementById('calculate-btn').dataset.nombre = pendingNombre;
+
+      const nombreMsg = pendingNombre ? ` · ${pendingNombre}` : '';
+      showToast(`✨ IA Groq + Validación Humana${nombreMsg}: ${total} horas autocompletadas.`, 'success');
+    }, 500);
+
+  } catch (e) {
+    console.error(e);
+    showToast('Hubo un error calculando las horas revisadas.', 'error');
+    document.getElementById('parse-status').classList.add('hidden');
+    document.getElementById('review-container').classList.remove('hidden');
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initSalaryInput();
   initUploadZone();
   initCalculateButton();
   initExportButton();
+
+  // Eventos de Nivel 2: Tabla de revisión
+  document.getElementById('review-confirm')?.addEventListener('click', processReviewedData);
+  document.getElementById('review-add-row')?.addEventListener('click', () => {
+    const tbody = document.getElementById('review-tbody');
+    const index = tbody.children.length;
+    tbody.insertAdjacentHTML('beforeend', createReviewRow({ fecha: '', ingreso: '', salida: '' }, index));
+  });
 
   // Auto-compute preview on jornada change
   document.getElementById('weekly-hours-select').dispatchEvent(new Event('change'));
@@ -1306,6 +1462,7 @@ if (typeof module !== 'undefined' && module.exports) {
     parseHoursFromText,
     calcularDesdeRegistros,
     precargarFestivos,
-    fetchFestivos
+    fetchFestivos,
+    sanitizeTime
   };
 }
