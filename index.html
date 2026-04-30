@@ -139,16 +139,157 @@
         <!-- Parsing Progress -->
         <div class="parse-status hidden" id="parse-status">
           <div class="progress-bar-track">
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora de Horas Extra Colombia | LaborCalc</title>
+  <meta name="description"
+    content="Calcula automáticamente las horas extra, recargos nocturnos, dominicales y festivos de tus empleados según la legislación laboral colombiana." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <!-- ── BACKGROUND PARTICLES ── -->
+  <div class="bg-orbs" aria-hidden="true">
+    <span class="orb orb-1"></span>
+    <span class="orb orb-2"></span>
+    <span class="orb orb-3"></span>
+  </div>
+
+  <!-- ── HEADER / HERO ── -->
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="logo">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true">
+          <rect width="36" height="36" rx="10" fill="url(#logoGrad)" />
+          <path d="M18 8a10 10 0 1 0 0 20A10 10 0 0 0 18 8zm0 3v7l5 3-1 1.7L16 19V11h2z" fill="white" />
+          <defs>
+            <linearGradient id="logoGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#6C63FF" />
+              <stop offset="1" stop-color="#3ECFCF" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <span>LaborCalc - Cálculo exacto de horas extra.</span>
+      </div>
+      <div class="hero-text">
+        <h1>Calculadora de Horas Extra</h1>
+        <p>Legislación laboral colombiana · Ley 2101 de 2021</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── MAIN CONTENT ── -->
+  <main class="main-layout">
+
+    <!-- LEFT PANEL ── INPUTS -->
+    <section class="panel panel-left" aria-label="Entrada de datos">
+
+      <!-- STEP 1: Salary -->
+      <div class="card step-card" id="card-salary">
+        <div class="step-badge">1</div>
+        <h2 class="card-title">Datos del empleado</h2>
+
+        <div class="form-group">
+          <label for="salary-input" class="form-label">Salario mensual (COP)</label>
+          <div class="input-wrapper">
+            <span class="input-prefix">$</span>
+            <input id="salary-input" type="text" inputmode="numeric" class="form-input" placeholder="2.500.000"
+              autocomplete="off" />
+          </div>
+          <span class="input-hint" id="hourly-preview"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="weekly-hours-select" class="form-label">Jornada laboral semanal</label>
+          <select id="weekly-hours-select" class="form-select">
+            <option value="47">47 h/semana (hasta 2023)</option>
+            <option value="46">46 h/semana (2024)</option>
+            <option value="44">44 h/semana (2025)</option>
+            <option value="42" selected>42 h/semana (2026 en adelante)</option>
+          </select>
+        </div>
+
+        <div class="schedule-row">
+          <div class="form-group">
+            <label for="schedule-start" class="form-label">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              Inicio jornada habitual
+            </label>
+            <input id="schedule-start" type="time" class="form-input form-input--time" value="07:00" />
+          </div>
+          <div class="form-group">
+            <label for="schedule-end" class="form-label">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              Fin jornada habitual
+            </label>
+            <input id="schedule-end" type="time" class="form-input form-input--time" value="17:00" />
+          </div>
+        </div>
+        <p class="schedule-hint">El horario laboral se tomara a partir de el horario de entrada y salida de lunes a
+          viernes y esta definido de las 7:00 AM a 5:00 PM</p>
+        <p class="schedule-hint">Horas en sábado, domingo y festivos se liquidan con recargo dominical</p>
+      </div>
+
+      <!-- STEP 2: PDF Upload -->
+      <div class="card step-card" id="card-upload">
+        <div class="step-badge">2</div>
+        <h2 class="card-title">Registro de horarios</h2>
+        <p class="card-subtitle" id="upload-subtitle">La IA analizará el PDF y extraerá las horas automáticamente.</p>
+
+        <div class="upload-zone" id="upload-zone" role="button" tabindex="0" aria-label="Subir archivo PDF">
+          <div class="upload-icon" aria-hidden="true">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+              <path d="M24 4L36 14H28V30H20V14H12L24 4Z" fill="currentColor" opacity=".8" />
+              <rect x="8" y="36" width="32" height="4" rx="2" fill="currentColor" opacity=".4" />
+            </svg>
+          </div>
+          <p class="upload-title">Arrastra tu PDF aquí</p>
+          <p class="upload-sub">o <span class="upload-link" id="upload-trigger">selecciona un archivo</span></p>
+          <p class="upload-formats">Formato: PDF con tabla de horarios · Extracción con IA</p>
+          <input type="file" id="pdf-file-input" accept=".pdf" style="display:none;" aria-hidden="true" />
+        </div>
+
+        <!-- File Info -->
+        <div class="file-info hidden" id="file-info">
+          <div class="file-icon" aria-hidden="true">📄</div>
+          <div class="file-details">
+            <span class="file-name" id="file-name-label">archivo.pdf</span>
+            <span class="file-size" id="file-size-label">0 KB</span>
+          </div>
+          <button class="file-remove" id="remove-file-btn" aria-label="Quitar archivo">✕</button>
+        </div>
+
+        <!-- Parsing Progress -->
+        <div class="parse-status hidden" id="parse-status">
+          <div class="progress-bar-track">
             <div class="progress-bar-fill" id="progress-fill"></div>
           </div>
           <p class="parse-message" id="parse-message">Leyendo PDF…</p>
         </div>
       </div>
 
-      <!-- Tabla de Revisi�n (Nivel 2) -->
+      <!-- Tabla de Revisión (Nivel 2) -->
       <div class="review-container hidden" id="review-container">
         <div class="review-header">
-          <h3>Revisa los datos extra�dos</h3>
+          <h3>Revisa los datos extraídos</h3>
           <p>Corrige cualquier error de lectura antes de calcular.</p>
         </div>
         <div class="review-table-wrapper">
@@ -162,12 +303,12 @@
               </tr>
             </thead>
             <tbody id="review-tbody">
-              <!-- Filas din�micas -->
+              <!-- Filas dinámicas -->
             </tbody>
           </table>
         </div>
         <div class="review-actions">
-          <button class="btn btn-outline" id="review-add-row">+ A�adir fila</button>
+          <button class="btn btn-outline" id="review-add-row">+ Añadir fila</button>
           <button class="btn btn-primary" id="review-confirm">Confirmar y Calcular</button>
         </div>
       </div>
