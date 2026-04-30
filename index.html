@@ -102,8 +102,11 @@
             <input id="schedule-end" type="time" class="form-input form-input--time" value="17:00" />
           </div>
         </div>
-        <p class="schedule-hint">El horario laboral se tomara a partir de el horario de entrada y salida de lunes a
-          viernes y esta definido de las 7:00 AM a 5:00 PM</p>
+        <div class="form-group" style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+          <input type="checkbox" id="work-saturdays" checked style="width: 16px; height: 16px; accent-color: var(--color-primary); cursor: pointer;">
+          <label for="work-saturdays" class="form-label" style="margin: 0; cursor: pointer;">La jornada habitual incluye los sábados</label>
+        </div>
+        <p class="schedule-hint">El horario se descontará de los días laborales seleccionados.</p>
         <p class="schedule-hint">Horas en sábado, domingo y festivos se liquidan con recargo dominical</p>
       </div>
 

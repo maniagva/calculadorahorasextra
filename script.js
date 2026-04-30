@@ -907,6 +907,7 @@ function validateSchedule() {
 function getScheduleMinutes() {
   const startVal = document.getElementById('schedule-start')?.value || '07:00';
   const endVal = document.getElementById('schedule-end')?.value || '17:00';
+  const worksSaturdays = document.getElementById('work-saturdays')?.checked;
 
   const [sh, sm] = startVal.split(':').map(Number);
   const [eh, em] = endVal.split(':').map(Number);
@@ -914,7 +915,7 @@ function getScheduleMinutes() {
   return {
     schedInicio: sh * 60 + sm,
     schedFin: eh * 60 + em,
-    workDays: [1, 2, 3, 4, 5],  // Lunes a viernes (fijo)
+    workDays: worksSaturdays ? [1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5],
   };
 }
 
