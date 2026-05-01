@@ -1265,65 +1265,117 @@ function initCalculateButton() {
 
 // ── Export button ─────────────────────────────────────
 
-function initExportButton() {
-  const btn = document.getElementById('export-btn');
+function initExportMenu() {
+  const trigger = document.getElementById('export-dropdown-btn');
+  const menu = document.getElementById('export-menu');
+  const btnTxt = document.getElementById('export-txt');
+  const btnCsv = document.getElementById('export-csv');
+  const btnPdf = document.getElementById('export-pdf');
 
-  btn.addEventListener('click', () => {
+  if (!trigger) return;
+
+  // Toggle menu
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    menu.classList.toggle('show');
+  });
+
+  // Close menu on click outside
+  document.addEventListener('click', () => menu.classList.remove('show'));
+
+  const getDataForExport = () => {
     const salary = parseSalary(document.getElementById('salary-input').value);
     const jornada = parseInt(document.getElementById('weekly-hours-select').value, 10);
     const horaOrd = calcHoraOrdinaria(salary, jornada);
-
     const tbody = document.getElementById('breakdown-tbody');
     const totalPagar = document.getElementById('metric-total-pagar').textContent;
     const totalHoras = document.getElementById('metric-total-horas').textContent;
     const fecha = new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
-
     const nombre = document.getElementById('calculate-btn').dataset.nombre || '';
+
+    const rows = Array.from(tbody.querySelectorAll('tr')).map(tr => {
+      const cells = tr.querySelectorAll('td');
+      if (cells.length >= 5) {
+        return {
+          tipo: cells[0].textContent.trim(),
+          horas: cells[1].textContent.trim(),
+          recargo: cells[2].textContent.trim(),
+          unitario: cells[3].textContent.trim(),
+          subtotal: cells[4].textContent.trim()
+        };
+      }
+      return null;
+    }).filter(r => r);
+
+    return { salary, jornada, horaOrd, totalPagar, totalHoras, fecha, nombre, rows };
+  };
+
+  btnTxt.addEventListener('click', () => {
+    const d = getDataForExport();
     let txt = `═══════════════════════════════════════════\n`;
     txt += `  LIQUIDACIÓN DE HORAS EXTRA – LABORCALC\n`;
-    txt += `  Fecha: ${fecha}\n`;
+    txt += `  Fecha: ${d.fecha}\n`;
     txt += `═══════════════════════════════════════════\n\n`;
-    if (nombre) {
-      txt += `Empleado            : ${nombre}\n`;
-    }
-    txt += `Salario mensual     : ${formatCOP(salary)}\n`;
-    txt += `Jornada semanal     : ${jornada} horas\n`;
-    txt += `Valor hora ordinaria: ${formatCOP(horaOrd)}\n\n`;
+    if (d.nombre) txt += `Empleado            : ${d.nombre}\n`;
+    txt += `Salario mensual     : ${formatCOP(d.salary)}\n`;
+    txt += `Jornada semanal     : ${d.jornada} horas\n`;
+    txt += `Valor hora ordinaria: ${formatCOP(d.horaOrd)}\n\n`;
     txt += `───────────────────────────────────────────\n`;
     txt += `DESGLOSE\n`;
     txt += `───────────────────────────────────────────\n`;
 
-    Array.from(tbody.querySelectorAll('tr')).forEach((tr) => {
-      const cells = tr.querySelectorAll('td');
-      if (cells.length >= 5) {
-        const tipo = cells[0].textContent.trim();
-        const horas = cells[1].textContent.trim();
-        const recargo = cells[2].textContent.trim();
-        const unitario = cells[3].textContent.trim();
-        const subtotal = cells[4].textContent.trim();
-        txt += `${tipo.substring(0, 42).padEnd(42)} ${horas.padStart(6)}  ${recargo.padStart(5)}  ${unitario.padStart(14)}  ${subtotal.padStart(16)}\n`;
-      }
+    d.rows.forEach(r => {
+      txt += `${r.tipo.substring(0, 42).padEnd(42)} ${r.horas.padStart(6)}  ${r.recargo.padStart(5)}  ${r.unitario.padStart(14)}  ${r.subtotal.padStart(16)}\n`;
     });
 
     txt += `\n═══════════════════════════════════════════\n`;
-    txt += `Total horas extra   : ${totalHoras}\n`;
-    txt += `TOTAL A PAGAR       : ${totalPagar}\n`;
+    txt += `Total horas extra   : ${d.totalHoras}\n`;
+    txt += `TOTAL A PAGAR       : ${d.totalPagar}\n`;
     txt += `═══════════════════════════════════════════\n`;
     txt += `\nGenerado por LaborCalc · Basado en CST + Ley 2101/2021\n`;
 
-    // Create download
-    const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+    downloadFile(txt, 'text/plain', 'txt');
+  });
+
+  btnCsv.addEventListener('click', () => {
+    const d = getDataForExport();
+    let csv = `sep=,\n`; // Help Excel recognize comma separator
+    csv += `Liquidación de Horas Extra - LaborCalc\n`;
+    csv += `Fecha,${d.fecha}\n`;
+    if (d.nombre) csv += `Empleado,${d.nombre}\n`;
+    csv += `Salario Mensual,${d.salary}\n`;
+    csv += `Jornada Semanal,${d.jornada}\n`;
+    csv += `Valor Hora Ordinaria,${d.horaOrd}\n\n`;
+    csv += `Tipo de Hora,Cantidad,Recargo,Vlr Unitario,Subtotal\n`;
+
+    d.rows.forEach(r => {
+      const u = r.unitario.replace(/[^\d]/g, '');
+      const s = r.subtotal.replace(/[^\d]/g, '');
+      csv += `"${r.tipo}",${r.horas},"${r.recargo}",${u},${s}\n`;
+    });
+
+    csv += `\nTotal Horas,${d.totalHoras}\n`;
+    csv += `TOTAL A PAGAR,${d.totalPagar.replace(/[^\d]/g, '')}\n`;
+
+    downloadFile(csv, 'text/csv', 'csv');
+  });
+
+  btnPdf.addEventListener('click', () => {
+    window.print();
+  });
+
+  function downloadFile(content, type, ext) {
+    const blob = new Blob(["\ufeff", content], { type: `${type};charset=utf-8` });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `liquidacion_horas_extra_${new Date().toISOString().slice(0, 10)}.txt`;
+    a.download = `liquidacion_${new Date().toISOString().slice(0, 10)}.${ext}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-
     showToast('Archivo exportado correctamente.', 'success');
-  });
+  }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1437,7 +1489,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initSalaryInput();
   initUploadZone();
   initCalculateButton();
-  initExportButton();
+  initExportMenu();
 
   // Eventos de Nivel 2: Tabla de revisión
   document.getElementById('review-confirm')?.addEventListener('click', processReviewedData);

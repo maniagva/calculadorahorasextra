@@ -1139,3 +1139,120 @@ body {
 .btn-outline:hover {
   background: rgba(255, 255, 255, 0.05);
 }
+
+/* ── DROPDOWN MENU ────────────────────────────────────── */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  z-index: 100;
+  min-width: 160px;
+  display: none;
+  overflow: hidden;
+  animation: fadeIn 0.2s ease;
+}
+
+.dropdown-menu.show {
+  display: block;
+}
+
+.dropdown-item {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  color: var(--color-text);
+  text-align: left;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.2s;
+}
+
+.dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dropdown-item:not(:last-child) {
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* ── PRINT STYLES (PDF EXPORT) ───────────────────────── */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .nav-header, 
+  .panel-left, 
+  .dropdown, 
+  .empty-state, 
+  .results-header button,
+  .btn,
+  #toast {
+    display: none !important;
+  }
+
+  .main-layout {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .panel-right {
+    width: 100% !important;
+    position: static !important;
+  }
+
+  .card {
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+    padding: 0 !important;
+  }
+
+  .results-title {
+    background: none !important;
+    -webkit-text-fill-color: black !important;
+    color: black !important;
+    margin-bottom: 2rem;
+  }
+
+  .metric-card {
+    background: #f9f9f9 !important;
+    border: 1px solid #eee !important;
+  }
+
+  .metric-label, .metric-value {
+    color: black !important;
+  }
+
+  .tag-badge {
+    border: 1px solid #ddd !important;
+    color: black !important;
+    background: transparent !important;
+  }
+
+  .breakdown-table th {
+    background: #f0f0f0 !important;
+    color: black !important;
+  }
+
+  .breakdown-table td {
+    border-bottom: 1px solid #eee !important;
+  }
+}

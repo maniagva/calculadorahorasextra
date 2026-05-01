@@ -280,15 +280,22 @@
 
           <div class="results-header">
             <h2 class="results-title">Resumen de liquidación</h2>
-            <button class="btn btn-ghost btn-sm" id="export-btn" title="Exportar como texto">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                aria-hidden="true">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              Exportar
-            </button>
+            <div class="dropdown">
+              <button class="btn btn-ghost btn-sm dropdown-trigger" id="export-dropdown-btn" title="Exportar resultados">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Exportar
+              </button>
+              <div class="dropdown-menu" id="export-menu">
+                <button class="dropdown-item" id="export-txt">📄 Texto (.txt)</button>
+                <button class="dropdown-item" id="export-csv">📊 Excel (.csv)</button>
+                <button class="dropdown-item" id="export-pdf">🖨️ PDF / Imprimir</button>
+              </div>
+            </div>
           </div>
 
           <!-- Nombre del empleado (extraído del PDF por IA) -->
