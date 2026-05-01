@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -203,7 +203,12 @@
         <p class="card-subtitle">Edita o ingresa horas directamente si el PDF no fue detectado correctamente por la IA.
         </p>
 
-        <div class="hours-grid">
+        <details class="manual-accordion">
+          <summary class="manual-accordion-summary">
+            Ajustes Manuales Avanzados
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" class="accordion-icon"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </summary>
+          <div class="hours-grid">
 
           <div class="hours-group">
             <h3 class="hours-group-title">⏱ Horas extra diurnas</h3>
@@ -244,9 +249,10 @@
               <input id="recargo-nocturno-dom" type="number" class="form-input" placeholder="0" min="0" step="0.5" />
             </div>
           </div>
-        </div>
+          </div>
+        </details>
 
-        <button class="btn btn-primary" id="calculate-btn">
+        <button class="btn btn-primary" id="calculate-btn" style="margin-top: 1.5rem;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
             aria-hidden="true">
             <rect x="2" y="2" width="20" height="20" rx="3" />
@@ -329,7 +335,7 @@
               </tbody>
               <tfoot>
                 <tr class="table-total-row">
-                  <td colspan="3">Gran total a pagar</td>
+                  <td colspan="4">Gran total a pagar</td>
                   <td id="table-grand-total"><strong>$0</strong></td>
                 </tr>
               </tfoot>

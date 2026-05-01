@@ -147,13 +147,18 @@ body {
   margin: 0 auto;
   padding: 2rem 1.5rem 4rem;
   display: grid;
-  grid-template-columns: 420px 1fr;
-  gap: 1.5rem;
+  grid-template-columns: 5fr 7fr;
+  gap: 2rem;
   align-items: start;
 }
 
 /* ── PANEL ───────────────────────────────────────────── */
 .panel { display: flex; flex-direction: column; gap: 1.25rem; }
+.panel-right {
+  position: sticky;
+  top: 2rem;
+  /* El height puede ser limitado si hay scroll interno, pero por ahora solo se pega */
+}
 
 /* ── CARD ────────────────────────────────────────────── */
 .card {
@@ -399,6 +404,46 @@ body {
 }
 
 /* ── HOURS GRID ─────────────────────────────────────── */
+/* Accordion Step 3 */
+.manual-accordion {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.02);
+  margin-top: 1rem;
+}
+.manual-accordion-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1rem;
+  font-weight: 500;
+  color: var(--color-text);
+  cursor: pointer;
+  user-select: none;
+  list-style: none; /* Hide default triangle in WebKit/Blink */
+}
+.manual-accordion-summary::-webkit-details-marker {
+  display: none; /* Hide default triangle in older Safari */
+}
+.manual-accordion-summary:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.manual-accordion[open] .manual-accordion-summary {
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(99, 102, 241, 0.08);
+}
+.manual-accordion .accordion-icon {
+  transition: transform 0.3s ease;
+  color: var(--color-text-muted);
+}
+.manual-accordion[open] .accordion-icon {
+  transform: rotate(180deg);
+  color: var(--color-primary);
+}
+.manual-accordion .hours-grid {
+  padding: 1rem;
+}
+
 .hours-grid { display: flex; flex-direction: column; gap: 1.1rem; }
 
 .hours-group {
