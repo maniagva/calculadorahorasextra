@@ -1161,7 +1161,7 @@ function initUploadZone() {
 
 // ── Results rendering ─────────────────────────────────
 
-function renderResults({ lineas, total, totalHoras, horaOrdinaria }) {
+function renderResults({ lineas, total, totalHoras, horaOrdinaria, salarioMensual }) {
   const emptyState = document.getElementById('empty-state');
   const resultsContent = document.getElementById('results-content');
   const tbody = document.getElementById('breakdown-tbody');
@@ -1203,9 +1203,24 @@ function renderResults({ lineas, total, totalHoras, horaOrdinaria }) {
     tbody.appendChild(tr);
   }
 
-  // Grand total — buscar el elemento correcto
+  // Grand total
   const grandTotalEl = document.getElementById('table-grand-total');
   if (grandTotalEl) grandTotalEl.innerHTML = `<strong>${formatCOP(total)}</strong>`;
+
+  // ── Liquidación Neta ──────────────────────────────────────────
+  const TASA_SALUD    = 0.04; // 4% empleado
+  const TASA_PENSION  = 0.04; // 4% empleado
+  const devengado     = (salarioMensual || 0) + total;
+  const descSalud     = devengado * TASA_SALUD;
+  const descPension   = devengado * TASA_PENSION;
+  const neto          = devengado - descSalud - descPension;
+
+  document.getElementById('neto-salario').textContent  = formatCOP(salarioMensual || 0);
+  document.getElementById('neto-extras').textContent   = formatCOP(total);
+  document.getElementById('neto-devengado').textContent= formatCOP(devengado);
+  document.getElementById('neto-salud').textContent    = formatCOP(descSalud);
+  document.getElementById('neto-pension').textContent  = formatCOP(descPension);
+  document.getElementById('neto-total').textContent    = formatCOP(neto);
 
   emptyState.classList.add('hidden');
   resultsContent.classList.remove('hidden');
@@ -1252,7 +1267,7 @@ function initCalculateButton() {
     }
 
     const result = calcularHorasExtra(salary, jornada, horas);
-    renderResults(result);
+    renderResults({ ...result, salarioMensual: salary });
 
     // Scroll to results on mobile
     if (window.innerWidth < 900) {

@@ -1256,3 +1256,98 @@ body {
     border-bottom: 1px solid #eee !important;
   }
 }
+/* ── NETO LIQUIDATION CARD ──────────────────────────────── */
+.neto-card {
+  margin-top: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(99,102,241,0.06) 0%, rgba(76,175,130,0.06) 100%);
+}
+
+.neto-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  padding: 0.9rem 1.2rem 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.neto-rows {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 1.2rem;
+  gap: 0;
+}
+
+.neto-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 0.87rem;
+}
+
+.neto-row:last-child { border-bottom: none; }
+
+.neto-label { color: var(--color-text-muted); }
+
+.neto-value {
+  font-weight: 600;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.neto-row--total-bruto {
+  background: rgba(255,255,255,0.04);
+  border-radius: var(--radius-sm);
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  margin: 0.25rem -0.5rem;
+  border-bottom: none;
+}
+
+.neto-row--total-bruto .neto-label,
+.neto-row--total-bruto .neto-value {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.neto-row--deduction .neto-label { color: #f87171; font-size: 0.82rem; }
+.neto-row--deduction .neto-value { color: #f87171; }
+
+.neto-result {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.2rem;
+  background: linear-gradient(90deg, rgba(76,175,130,0.18) 0%, rgba(99,102,241,0.18) 100%);
+  border-top: 1px solid rgba(76,175,130,0.3);
+}
+
+.neto-result-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #4caf82;
+}
+
+.neto-result-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #4caf82;
+  font-variant-numeric: tabular-nums;
+}
+
+.neto-nota {
+  font-size: 0.72rem;
+  color: var(--color-text-dim);
+  padding: 0.5rem 1.2rem 0.75rem;
+  margin: 0;
+  border-top: 1px solid var(--color-border);
+  line-height: 1.5;
+}

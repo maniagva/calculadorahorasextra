@@ -349,6 +349,38 @@
             </table>
           </div>
 
+          <!-- Liquidación Neta -->
+          <div class="neto-card" id="neto-card">
+            <h3 class="neto-title">Liquidación Neta del Período</h3>
+            <div class="neto-rows">
+              <div class="neto-row">
+                <span class="neto-label">Salario mensual base</span>
+                <span class="neto-value" id="neto-salario">$0</span>
+              </div>
+              <div class="neto-row">
+                <span class="neto-label">+ Total horas extra y recargos</span>
+                <span class="neto-value" id="neto-extras">$0</span>
+              </div>
+              <div class="neto-row neto-row--total-bruto">
+                <span class="neto-label">= Total devengado</span>
+                <span class="neto-value" id="neto-devengado">$0</span>
+              </div>
+              <div class="neto-row neto-row--deduction">
+                <span class="neto-label">(-) Salud empleado (4%)</span>
+                <span class="neto-value" id="neto-salud">$0</span>
+              </div>
+              <div class="neto-row neto-row--deduction">
+                <span class="neto-label">(-) Pensión empleado (4%)</span>
+                <span class="neto-value" id="neto-pension">$0</span>
+              </div>
+            </div>
+            <div class="neto-result">
+              <span class="neto-result-label">NETO A PAGAR AL EMPLEADO</span>
+              <span class="neto-result-value" id="neto-total">$0</span>
+            </div>
+            <p class="neto-nota">* Las horas extra y recargos son prestacionales y hacen parte de la base para los descuentos de Salud y Pensión (Art. 127 CST).</p>
+          </div>
+
           <div class="reference-table-wrapper">
             <table class="reference-table">
               <thead>
