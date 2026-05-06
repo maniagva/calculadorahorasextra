@@ -51,6 +51,15 @@ const RECARGOS = {
 /** Meses en un año (para dividir salario mensual → valor hora). */
 const MESES_AÑO = 12;
 
+/**
+ * Valores legales anuales (Decretos de ajuste salarial Colombia).
+ * Actualizar cada enero con el decreto del año vigente.
+ * 2026: Decreto 2712 de 2025.
+ */
+const SMMLV_2026           = 1_750_905;  // Salario Mínimo Mensual Legal Vigente 2026
+const AUXILIO_TRANSPORTE   = 249_095;    // Auxilio de Transporte 2026 (Decreto vigente)
+const TOPE_AUXILIO_SMMLV   = 2;          // Aplica para empleados que ganen ≤ 2 SMMLV
+
 /* ══════════════════════════════════════════════════════
    3. UTILIDADES
    ══════════════════════════════════════════════════════ */
@@ -1210,17 +1219,29 @@ function renderResults({ lineas, total, totalHoras, horaOrdinaria, salarioMensua
   // ── Liquidación Neta ──────────────────────────────────────────
   const TASA_SALUD    = 0.04; // 4% empleado
   const TASA_PENSION  = 0.04; // 4% empleado
-  const devengado     = (salarioMensual || 0) + total;
-  const descSalud     = devengado * TASA_SALUD;
-  const descPension   = devengado * TASA_PENSION;
-  const neto          = devengado - descSalud - descPension;
 
-  document.getElementById('neto-salario').textContent  = formatCOP(salarioMensual || 0);
-  document.getElementById('neto-extras').textContent   = formatCOP(total);
-  document.getElementById('neto-devengado').textContent= formatCOP(devengado);
-  document.getElementById('neto-salud').textContent    = formatCOP(descSalud);
-  document.getElementById('neto-pension').textContent  = formatCOP(descPension);
-  document.getElementById('neto-total').textContent    = formatCOP(neto);
+  // Auxilio de transporte: aplica solo si salario ≤ 2 SMMLV
+  // NO entra en la base de salud/pensión (Art. 17 Ley 21/1982)
+  const salario       = salarioMensual || 0;
+  const tieneAuxilio  = salario <= (SMMLV_2026 * TOPE_AUXILIO_SMMLV);
+  const auxilio       = tieneAuxilio ? AUXILIO_TRANSPORTE : 0;
+
+  // Base de cotización = salario + extras (el auxilio NO se incluye)
+  const baseCotizacion = salario + total;
+  const descSalud      = baseCotizacion * TASA_SALUD;
+  const descPension    = baseCotizacion * TASA_PENSION;
+
+  // Devengado total que recibe el empleado (incluyendo auxilio)
+  const devengado      = baseCotizacion + auxilio;
+  const neto           = devengado - descSalud - descPension;
+
+  document.getElementById('neto-salario').textContent   = formatCOP(salario);
+  document.getElementById('neto-extras').textContent    = formatCOP(total);
+  document.getElementById('neto-auxilio').textContent   = tieneAuxilio ? formatCOP(auxilio) : '—  (no aplica)';
+  document.getElementById('neto-devengado').textContent = formatCOP(devengado);
+  document.getElementById('neto-salud').textContent     = formatCOP(descSalud);
+  document.getElementById('neto-pension').textContent   = formatCOP(descPension);
+  document.getElementById('neto-total').textContent     = formatCOP(neto);
 
   emptyState.classList.add('hidden');
   resultsContent.classList.remove('hidden');
