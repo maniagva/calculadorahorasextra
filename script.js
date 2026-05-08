@@ -48,17 +48,46 @@ const RECARGOS = {
   EXTRA_DOMINICAL_NOCTURO: 2.50,
 };
 
-/** Meses en un año (para dividir salario mensual → valor hora). */
-const MESES_AÑO = 12;
+/**
+ * Horas mensuales legales según la jornada (valores fijos normativos).
+ * - 44 h/semana → 220 h/mes  (antes del 15 julio 2026)
+ * - 42 h/semana → 210 h/mes  (desde el 15 julio 2026, Ley 2101/2021)
+ * Nota: estos valores son los establecidos por el Ministerio del Trabajo
+ * y NO se calculan como jornada×52/12, sino como referencia normativa fija.
+ */
+const HORAS_MENSUALES = {
+  44: 220,
+  42: 210,
+};
 
 /**
- * Valores legales anuales (Decretos de ajuste salarial Colombia).
- * Actualizar cada enero con el decreto del año vigente.
- * 2026: Decreto 2712 de 2025.
+ * Tabla histórica de valores legales anuales (Colombia).
+ * Fuente: Decretos de fin de año del Ministerio del Trabajo.
+ * ──────────────────────────────────────────────────────────
+ * Para actualizar: agregar una nueva entrada cada enero.
+ *   Ejemplo: 2027: { smmlv: X_XXX_XXX, auxilio: XXX_XXX }
  */
-const SMMLV_2026           = 1_750_905;  // Salario Mínimo Mensual Legal Vigente 2026
-const AUXILIO_TRANSPORTE   = 249_095;    // Auxilio de Transporte 2026 (Decreto vigente)
-const TOPE_AUXILIO_SMMLV   = 2;          // Aplica para empleados que ganen ≤ 2 SMMLV
+const VALORES_LEGALES = {
+  2024: { smmlv: 1_300_000, auxilio: 162_000 },
+  2025: { smmlv: 1_423_500, auxilio: 200_000 },
+  2026: { smmlv: 1_750_905, auxilio: 249_095 },
+};
+
+/**
+ * Devuelve los valores legales vigentes según el año actual.
+ * Si no existe el año, usa el más reciente disponible en la tabla.
+ */
+function getValoresLegalesVigentes() {
+  const añoActual = new Date().getFullYear();
+  if (VALORES_LEGALES[añoActual]) return VALORES_LEGALES[añoActual];
+  // Fallback: año más reciente registrado
+  const añoMax = Math.max(...Object.keys(VALORES_LEGALES).map(Number));
+  console.warn(`⚠️ LaborCalc: No hay valores legales para ${añoActual}. Usando ${añoMax}.`);
+  return VALORES_LEGALES[añoMax];
+}
+
+const { smmlv: SMMLV_VIGENTE, auxilio: AUXILIO_TRANSPORTE } = getValoresLegalesVigentes();
+const TOPE_AUXILIO_SMMLV = 2; // Aplica para empleados que ganen ≤ 2 SMMLV
 
 /* ══════════════════════════════════════════════════════
    3. UTILIDADES
@@ -138,16 +167,36 @@ function showToast(msg, type = 'success') {
 
 /**
  * Calcula el valor de la hora ordinaria.
- * Fórmula: Salario mensual / (jornada_semanal × 52 semanas / 12 meses)
  *
- * @param {number} salarioMensual  Salario mensual en COP
- * @param {number} jornadaSemanal  Horas de jornada legal semanal (42–47)
+ * Usa las horas mensuales fijas establecidas por el Ministerio del Trabajo:
+ *  - 44 h/semana → 220 h/mes  (jornada vigente antes del 15 jul 2026)
+ *  - 42 h/semana → 210 h/mes  (jornada vigente desde el 15 jul 2026)
+ *
+ * IMPORTANTE: Los recargos se calculan sobre el salario SIN auxilio de transporte.
+ *
+ * @param {number} salarioMensual  Salario mensual en COP (sin auxilio)
+ * @param {number} jornadaSemanal  Horas de jornada legal semanal (42 o 44)
  * @returns {number} Valor de la hora ordinaria
  */
 function calcHoraOrdinaria(salarioMensual, jornadaSemanal) {
-  // Horas mensuales = (jornada_semanal * 52) / 12
-  const horasMensuales = (jornadaSemanal * 52) / MESES_AÑO;
+  const horasMensuales = HORAS_MENSUALES[jornadaSemanal];
+  if (!horasMensuales) {
+    console.warn(`⚠️ Jornada ${jornadaSemanal}h no reconocida. Usando 210 h/mes.`);
+    return salarioMensual / 210;
+  }
   return salarioMensual / horasMensuales;
+}
+
+/**
+ * Determina la jornada semanal legal vigente según la fecha actual.
+ * Antes del 15 de julio de 2026 → 44 h/semana (220 h/mes)
+ * Desde el 15 de julio de 2026 → 42 h/semana (210 h/mes)
+ * @returns {number} 44 o 42
+ */
+function getJornadaLegalVigente() {
+  const hoy = new Date();
+  const cambioJornada = new Date(2026, 6, 15); // 15 de julio de 2026
+  return hoy >= cambioJornada ? 42 : 44;
 }
 
 /**
@@ -1223,8 +1272,12 @@ function renderResults({ lineas, total, totalHoras, horaOrdinaria, salarioMensua
   // Auxilio de transporte: aplica solo si salario ≤ 2 SMMLV
   // NO entra en la base de salud/pensión (Art. 17 Ley 21/1982)
   const salario       = salarioMensual || 0;
-  const tieneAuxilio  = salario <= (SMMLV_2026 * TOPE_AUXILIO_SMMLV);
+  const tieneAuxilio  = salario <= (SMMLV_VIGENTE * TOPE_AUXILIO_SMMLV);
   const auxilio       = tieneAuxilio ? AUXILIO_TRANSPORTE : 0;
+
+  // Actualizar el tope dinámicamente en la nota legal
+  const topeEl = document.getElementById('neto-tope-smmlv');
+  if (topeEl) topeEl.textContent = formatCOP(SMMLV_VIGENTE * TOPE_AUXILIO_SMMLV).replace('$\u00a0', '');
 
   // Base de cotización = salario + extras (el auxilio NO se incluye)
   const baseCotizacion = salario + total;
@@ -1534,6 +1587,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const index = tbody.children.length;
     tbody.insertAdjacentHTML('beforeend', createReviewRow({ fecha: '', ingreso: '', salida: '' }, index));
   });
+
+  // Auto-seleccionar jornada legal vigente según la fecha actual
+  const selectJornada = document.getElementById('weekly-hours-select');
+  selectJornada.value = String(getJornadaLegalVigente());
 
   // Auto-compute preview on jornada change
   document.getElementById('weekly-hours-select').dispatchEvent(new Event('change'));
