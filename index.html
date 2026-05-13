@@ -204,49 +204,52 @@
         <details class="manual-accordion">
           <summary class="manual-accordion-summary">
             Ajustes Manuales Avanzados
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" class="accordion-icon"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              aria-hidden="true" class="accordion-icon">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
           </summary>
           <div class="hours-grid">
 
-          <div class="hours-group">
-            <h3 class="hours-group-title">⏱ Horas extra diurnas</h3>
-            <div class="form-group">
-              <label for="extra-diurna" class="form-label">Días de semana (6 AM – 7 PM)</label>
-              <input id="extra-diurna" type="number" class="form-input" placeholder="0" min="0" step="0.5" />
+            <div class="hours-group">
+              <h3 class="hours-group-title">⏱ Horas extra diurnas</h3>
+              <div class="form-group">
+                <label for="extra-diurna" class="form-label">Días de semana (6 AM – 7 PM)</label>
+                <input id="extra-diurna" type="number" class="form-input" placeholder="0" min="0" step="0.5" />
+              </div>
+              <div class="form-group">
+                <label for="extra-diurna-dom" class="form-label">Dominicales/Festivos diurnos</label>
+                <input id="extra-diurna-dom" type="number" class="form-input" placeholder="0" min="0" step="0.5" />
+              </div>
             </div>
-            <div class="form-group">
-              <label for="extra-diurna-dom" class="form-label">Dominicales/Festivos diurnos</label>
-              <input id="extra-diurna-dom" type="number" class="form-input" placeholder="0" min="0" step="0.5" />
-            </div>
-          </div>
 
-          <div class="hours-group">
-            <h3 class="hours-group-title">🌙 Horas extra nocturnas</h3>
-            <div class="form-group">
-              <label for="extra-nocturna" class="form-label">Días de semana (7 PM – 6 AM)</label>
-              <input id="extra-nocturna" type="number" class="form-input" placeholder="0" min="0" step="0.5" />
+            <div class="hours-group">
+              <h3 class="hours-group-title">🌙 Horas extra nocturnas</h3>
+              <div class="form-group">
+                <label for="extra-nocturna" class="form-label">Días de semana (7 PM – 6 AM)</label>
+                <input id="extra-nocturna" type="number" class="form-input" placeholder="0" min="0" step="0.5" />
+              </div>
+              <div class="form-group">
+                <label for="extra-nocturna-dom" class="form-label">Dominicales/Festivos nocturnos</label>
+                <input id="extra-nocturna-dom" type="number" class="form-input" placeholder="0" min="0" step="0.5" />
+              </div>
             </div>
-            <div class="form-group">
-              <label for="extra-nocturna-dom" class="form-label">Dominicales/Festivos nocturnos</label>
-              <input id="extra-nocturna-dom" type="number" class="form-input" placeholder="0" min="0" step="0.5" />
-            </div>
-          </div>
 
-          <div class="hours-group">
-            <h3 class="hours-group-title">🔆 Recargos (sin hora extra)</h3>
-            <div class="form-group">
-              <label for="recargo-nocturno" class="form-label">Recargo nocturno ordinario</label>
-              <input id="recargo-nocturno" type="number" class="form-input" placeholder="0" min="0" step="0.5" />
+            <div class="hours-group">
+              <h3 class="hours-group-title">🔆 Recargos (sin hora extra)</h3>
+              <div class="form-group">
+                <label for="recargo-nocturno" class="form-label">Recargo nocturno ordinario</label>
+                <input id="recargo-nocturno" type="number" class="form-input" placeholder="0" min="0" step="0.5" />
+              </div>
+              <div class="form-group">
+                <label for="recargo-dominical" class="form-label">Dominical/Festivo diurno ordinario</label>
+                <input id="recargo-dominical" type="number" class="form-input" placeholder="0" min="0" step="0.5" />
+              </div>
+              <div class="form-group">
+                <label for="recargo-nocturno-dom" class="form-label">Dominical/Festivo nocturno ordinario</label>
+                <input id="recargo-nocturno-dom" type="number" class="form-input" placeholder="0" min="0" step="0.5" />
+              </div>
             </div>
-            <div class="form-group">
-              <label for="recargo-dominical" class="form-label">Dominical/Festivo diurno ordinario</label>
-              <input id="recargo-dominical" type="number" class="form-input" placeholder="0" min="0" step="0.5" />
-            </div>
-            <div class="form-group">
-              <label for="recargo-nocturno-dom" class="form-label">Dominical/Festivo nocturno ordinario</label>
-              <input id="recargo-nocturno-dom" type="number" class="form-input" placeholder="0" min="0" step="0.5" />
-            </div>
-          </div>
           </div>
         </details>
 
@@ -279,7 +282,8 @@
           <div class="results-header">
             <h2 class="results-title">Resumen de liquidación</h2>
             <div class="dropdown">
-              <button class="btn btn-ghost btn-sm dropdown-trigger" id="export-dropdown-btn" title="Exportar resultados">
+              <button class="btn btn-ghost btn-sm dropdown-trigger" id="export-dropdown-btn"
+                title="Exportar resultados">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                   aria-hidden="true">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -380,7 +384,10 @@
               <span class="neto-result-label">NETO A PAGAR AL EMPLEADO</span>
               <span class="neto-result-value" id="neto-total">$0</span>
             </div>
-            <p class="neto-nota">* Las horas extra son prestacionales y hacen parte de la base de cotización de Salud y Pensión (Art. 127 CST). El auxilio de transporte aplica para salarios ≤ 2 SMMLV ($<span id="neto-tope-smmlv">3.501.810</span>) y <strong>no</strong> hace parte de la base de cotización (Art. 17 Ley 21/1982).</p>
+            <p class="neto-nota">* Las horas extra son prestacionales y hacen parte de la base de cotización de Salud y
+              Pensión (Art. 127 CST). El auxilio de transporte aplica para salarios ≤ 2 SMMLV ($<span
+                id="neto-tope-smmlv">3.501.810</span>) y <strong>no</strong> hace parte de la base de cotización (Art.
+              17 Ley 21/1982).</p>
           </div>
 
           <div class="reference-table-wrapper">
@@ -448,6 +455,97 @@
     <span id="toast-icon">✅</span>
     <span id="toast-msg">Mensaje de prueba</span>
   </div>
+
+  <!-- ── FOOTER ── -->
+  <footer class="site-footer">
+    <div class="footer-glow" aria-hidden="true"></div>
+    <div class="footer-inner">
+
+      <!-- Columna 1: Marca -->
+      <div class="footer-brand">
+        <div class="footer-logo">
+          <svg width="32" height="32" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true">
+            <rect width="36" height="36" rx="10" fill="url(#footerLogoGrad)" />
+            <path d="M18 8a10 10 0 1 0 0 20A10 10 0 0 0 18 8zm0 3v7l5 3-1 1.7L16 19V11h2z" fill="white" />
+            <defs>
+              <linearGradient id="footerLogoGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#6C63FF" />
+                <stop offset="1" stop-color="#3ECFCF" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <span class="footer-logo-text">LaborCalc</span>
+        </div>
+        <p class="footer-tagline">Calculadora de horas extra según la<br>legislación laboral colombiana vigente.</p>
+        <div class="footer-badges">
+          <span class="footer-badge">⚖️ Ley 2101/2021</span>
+          <span class="footer-badge">🇨🇴 Colombia</span>
+        </div>
+      </div>
+
+      <!-- Columna 2: Desarrollador -->
+      <div class="footer-dev">
+        <h4 class="footer-section-title">Desarrollado por</h4>
+        <p class="footer-dev-name">Giovanny Vasco</p>
+        <ul class="footer-contact-list">
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              aria-hidden="true">
+              <rect x="2" y="4" width="20" height="16" rx="2" />
+              <polyline points="2,4 12,13 22,4" />
+            </svg>
+            <a href="mailto:maniagva@gmail.com" class="footer-link">maniagva@gmail.com</a>
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              aria-hidden="true">
+              <path
+                d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+            </svg>
+            <a href="https://github.com/maniagva" target="_blank" rel="noopener"
+              class="footer-link">github.com/maniagva</a>
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              aria-hidden="true">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            <span>Colombia 🇨🇴</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Columna 3: Legal -->
+      <div class="footer-legal-col">
+        <h4 class="footer-section-title">Marco legal</h4>
+        <ul class="footer-legal-list">
+          <li>Código Sustantivo del Trabajo (CST)</li>
+          <li>Ley 2101 de 2021 — Reducción jornada</li>
+          <li>Art. 127 CST — Base prestacional</li>
+          <li>Ley 21 de 1982 — Auxilio de transporte</li>
+          <li>SMMLV 2026 — $1.750.905 COP</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- Barra de copyright -->
+    <div class="footer-copyright">
+      <div class="footer-copyright-inner">
+        <p class="footer-copyright-text">
+          <span class="footer-copy-symbol">©</span>
+          <span id="footer-year">2026</span>
+          <strong>Giovanny Vasco</strong> — Todos los derechos reservados.
+          <span class="footer-separator">|</span>
+          LaborCalc v2.0
+        </p>
+        <p class="footer-disclaimer">Esta herramienta es de carácter informativo. Consulte siempre a un asesor laboral
+          certificado.</p>
+      </div>
+    </div>
+  </footer>
 
   <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>

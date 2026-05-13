@@ -45,7 +45,7 @@ const RECARGOS = {
   // Hora EXTRA dominical/festiva diurna              → +100%
   EXTRA_DOMINICAL_DIURNO: 2.00,
   // Hora EXTRA dominical/festiva nocturna            → +150%
-  EXTRA_DOMINICAL_NOCTURO: 2.50,
+  EXTRA_DOMINICAL_NOCTURNO: 2.50,
 };
 
 /**
@@ -269,7 +269,7 @@ function calcularHorasExtra(salarioMensual, jornadaSemanal, horas) {
       tipo: 'Hora extra Dominical/Festivo nocturna',
       tagClass: 'tag-nocturno',
       horas: horas.extraDominicalNocturno,
-      factor: RECARGOS.EXTRA_DOMINICAL_NOCTURO,
+      factor: RECARGOS.EXTRA_DOMINICAL_NOCTURNO,
       recargo: '+150%',
     },
   ];
@@ -1616,3 +1616,10 @@ if (typeof module !== 'undefined' && module.exports) {
     sanitizeTime
   };
 }
+
+// ── Footer: año dinámico ──────────────────────────────
+(function() {
+  const yearEl = document.getElementById('footer-year');
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
+})();
+
